@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>うてな俳句会 臺俳句</title>
+
+    <!-- ★ PWA Manifest ファイルの読み込み -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- PWA / Android・iOS スタンドアロン指定 -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="うてな俳句">
+    <meta name="application-name" content="うてな俳句">
+    <meta name="theme-color" content="#faf9f6">
+    
+    <!-- アプリアイコン指定 -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
+
+    <!-- 🎨 デザインファイルを読み込み -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="loadingOverlay">うてな俳句を開いています...</div>
+
+    <!-- 🐾 おみ句じ猫ボタン -->
+    <img id="fixedCatBtn" src="omikuji-cat.png" alt="おみ句じを引く" class="fixed-cat-trigger hidden" onclick="launchOmikuji()" title="おみ句じを引く">
+
+    <!-- 2段構造のグローバルヘッダー領域 -->
+    <div id="headerArea" class="global-header-area">
+        <div class="header-row-top">
+            <div id="globalBreadcrumb" class="breadcrumb" style="display: none;"></div>
+        </div>
+        <div class="header-row-bottom">
+            <div id="roomMainTag" class="info-upper-tag"></div>
+            <div id="infoTrigger" onclick="revealHiddenInfo()">ℹ</div>
+        </div>
+    </div>
+
+    <!-- 🌸 季語解説ポップアップカード -->
+    <div id="kigoCardOverlay" class="card-overlay hidden" onclick="closeKigoCard()">
+        <div class="kigo-card-content">
+            <div class="card-column parent-kigo-col" id="cardParentKigo"></div>
+            <div class="card-column child-kigo-col" id="cardChildKigo"></div>
+            <div class="card-column desc-kigo-col" id="cardDesc"></div>
+        </div>
+    </div>
+
+    <!-- 🏡 トップメニュー -->
+    <div id="topPage" class="layer-page">
+        <!-- おみ句じ ブロック -->
+        <div class="menu-block">
+            <div class="sub-menu-group">
+                <div class="vertical-link sub-link" onclick="openRoom('detarame', 'all', 'いっしょくた')">いっしょくた</div>
+                <div class="vertical-link sub-link" onclick="renderPage('haijinPage')">俳人</div>
+                <div class="vertical-link sub-link" onclick="renderPage('haikuPage')">季節</div>
+            </div>
+            <div class="vertical-link main-headline" style="cursor: default;">おみ句じ</div>
+        </div>
+        
+        <!-- 季寄せ ブロック -->
+        <div class="menu-block">
+            <div class="vertical-link main-headline" onclick="renderPage('saijikiPage')">季寄せ</div>
+        </div>
+
+        <!-- うてな俳句 ブロック -->
+        <div class="menu-block">
+            <div class="vertical-link main-headline" onclick="showIssueYearList()">うてな俳句</div>
+        </div>
+    </div>
+
+    <!-- おみ句じ：俳人 ページ -->
+    <div id="haijinPage" class="layer-page">
+        <div id="haijinList" class="horizontal-scroll-container"></div>
+    </div>
+
+    <!-- おみ句じ：季節 ページ -->
+    <div id="haikuPage" class="layer-page">
+        <div class="fits-screen-container">
+            <div class="vertical-link" onclick="openRoom('haiku_season', 'haru', '春の句')">春</div>
+            <div class="vertical-link" onclick="openRoom('haiku_season', 'natsu', '夏の句')">夏</div>
+            <div class="vertical-link" onclick="openRoom('haiku_season', 'aki', '秋の句')">秋</div>
+            <div class="vertical-link" onclick="openRoom('haiku_season', 'huyu', '冬の句')">冬</div>
+            <div class="vertical-link" onclick="openRoom('haiku_season', 'shinnen', '新年の句')">新年</div>
+            <div class="vertical-link" onclick="openRoom('haiku_season', 'muki', '無季の句')">無季</div>
+        </div>
+    </div>
+
+    <!-- 季寄せ：季節一覧 ページ -->
+    <div id="saijikiPage" class="layer-page">
+        <!-- 🔍 季語検索エリア -->
+        <div class="saijiki-search-box">
+            <input type="text" id="kigoSearchInput" placeholder="季語を検索（例：春の夕）" oninput="handleKigoSearch()">
+            <div id="searchResults" class="search-results-dropdown hidden"></div>
+            <!-- 区切り線 -->
+            <div class="search-divider"></div>
+        </div>
+
+        <div class="fits-screen-container">
+            <div class="vertical-link" onclick="showKigoList('haru', '春')">春</div>
+            <div class="vertical-link" onclick="showKigoList('natsu', '夏')">夏</div>
+            <div class="vertical-link" onclick="showKigoList('aki', '秋')">秋</div>
+            <div class="vertical-link" onclick="showKigoList('huyu', '冬')">冬</div>
+            <div class="vertical-link" onclick="showKigoList('shinnen', '新年')">新年</div>
+            <div class="vertical-link" onclick="openRoom('kigo_muki', 'muki', '無季')">無季</div>
+        </div>
+    </div>
+
+    <!-- 季寄せ：親季語一覧 ページ -->
+    <div id="kigoListPage" class="layer-page">
+        <div id="kigoList" class="horizontal-scroll-container"></div>
+    </div>
+
+    <!-- 季寄せ・作品一覧スクロール方式 作品鑑賞画面 -->
+    <div id="saijikiListRoomPage" class="layer-page">
+        <div id="saijikiHaikuList" class="horizontal-scroll-container saijiki-scroll-list"></div>
+    </div>
+
+    <!-- 臺俳句：発行年選択 ページ -->
+    <div id="issueYearPage" class="layer-page">
+        <div id="issueYearList" class="horizontal-scroll-container"></div>
+    </div>
+
+    <!-- 臺俳句：発行月選択 ページ -->
+    <div id="issueMonthPage" class="layer-page">
+        <div id="issueMonthList" class="horizontal-scroll-container"></div>
+    </div>
+
+    <!-- 臺俳句：号内選択 ページ -->
+    <div id="issueDetailPage" class="layer-page">
+        <div id="issueDetailContent" class="fits-screen-container"></div>
+    </div>
+
+    <!-- 臺俳句：号内 俳人一覧 ページ -->
+    <div id="utenaAuthorListPage" class="layer-page">
+        <div id="utenaAuthorList" class="horizontal-scroll-container"></div>
+    </div>
+
+    <!-- 一句一画面 スクリーン部屋（おみ句じ・おみ句じ全句用） -->
+    <div id="roomPage" class="layer-page">
+        <button id="prevBtn" class="nav-arrow arrow-right" onclick="changeHaiku(-1)">＞</button> 
+        <button id="nextBtn" class="nav-arrow arrow-left" onclick="changeHaiku(1)">＜</button>  
+        <div class="haiku-screen"><p id="haikuPhrase" class="phrase"></p></div>
+    </div>
+
+    <!-- ⚙️ プログラムファイルを読み込み -->
+    <script src="app.js"></script>
+
+    <!-- 📲 Service Worker（PWA・オフライン対応）登録 -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => {
+                    console.log('ServiceWorker 登録スキップ/エラー:', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
