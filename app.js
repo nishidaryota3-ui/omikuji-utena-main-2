@@ -613,7 +613,7 @@ function executeKushuPrint() {
                     <div class="sheet-half-content colophon-page-content">
                         <div class="colophon-left-block">
                             <div class="print-colophon-brand">うてな俳句会</div>
-                            <img src="./stamp_utena.png" class="print-colophon-stamp" alt="うてな">
+                            <img src="./stamp_utena.png?v=2" class="print-colophon-stamp" alt="うてな">
                         </div>
                     </div>
                     <div class="print-nombre"></div>
