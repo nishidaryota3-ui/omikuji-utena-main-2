@@ -388,16 +388,22 @@ body, html {
 .horizontal-scroll-container {
     display: flex !important; 
     flex-direction: row-reverse !important; 
-    justify-content: center; 
+    justify-content: flex-start !important; 
     align-items: center;
-    width: 90vw; 
+    width: 100vw !important; 
     height: 65vh; 
     overflow-x: auto !important; 
     overflow-y: hidden !important; 
     scroll-behavior: smooth;
-    padding: 0 5vw;
-    margin: auto !important;
+    padding: 0 8vw;
+    margin: 0 !important;
     max-width: 100% !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 要素数が少なく画面内に収まる時は中央揃え */
+.horizontal-scroll-container.is-centered {
+    justify-content: center !important;
 }
 
 #kigoList { gap: 1.8rem !important; }
@@ -720,7 +726,7 @@ body, html {
     transition: opacity 0.35s ease, visibility 0.35s ease;
     padding: 16px;
 }
-.card-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.card-overlay.hidden { display: none !important; opacity: 0; visibility: hidden; pointer-events: none; }
 
 .kigo-card-wrapper {
     position: relative;

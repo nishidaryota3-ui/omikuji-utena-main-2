@@ -271,15 +271,14 @@ function getSeasonCode(name) {
     return map[name] || ''; 
 }
 
-// 🌸 横スクロールコンテナの配置調整（要素数に応じて中央揃え／先頭固定を切り替え）
+// 🌸 横スクロールコンテナの配置調整（要素数が少なく収まる時は中央揃えクラスを付与）
 function adjustScrollAlignment(container) {
     if (!container) return;
     requestAnimationFrame(() => {
         if (container.scrollWidth > container.clientWidth) {
-            container.style.justifyContent = 'flex-start';
-            container.scrollLeft = 0;
+            container.classList.remove('is-centered');
         } else {
-            container.style.justifyContent = 'center';
+            container.classList.add('is-centered');
         }
     });
 }
