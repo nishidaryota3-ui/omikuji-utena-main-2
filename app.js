@@ -168,10 +168,13 @@ function updateBreadcrumb() {
     } else if (navState.category === 'kushu') {
         html += ` <span class="separator">&lt;</span> <span class="${navState.currentLayer === 'kushuAuthorPage' ? 'current' : 'link'}" onclick="showKushuAuthorList()">句集</span>`;
         if (navState.authorName) {
-            if (navState.currentLayer === 'kushuDetailPage') {
+            if (navState.currentLayer === 'kushuAuthorHubPage') {
                 html += ` <span class="separator">&lt;</span> <span class="current">${escapeHtml(navState.authorName)}</span>`;
-            } else if (navState.currentLayer === 'roomPage') {
-                html += ` <span class="separator">&lt;</span> <span class="link" onclick="showKushuAuthorDetail('${escapeHtml(navState.authorName)}')">${escapeHtml(navState.authorName)}</span>`;
+            } else if (navState.currentLayer === 'kushuChronoPage') {
+                html += ` <span class="separator">&lt;</span> <span class="link" onclick="showKushuAuthorHub('${escapeHtml(navState.authorName)}')">${escapeHtml(navState.authorName)}</span>`;
+                html += ` <span class="separator">&lt;</span> <span class="current">時系列</span>`;
+            } else if (navState.currentLayer === 'roomPage' && currentDisplayType === 'kushu_author') {
+                html += ` <span class="separator">&lt;</span> <span class="link" onclick="showKushuAuthorHub('${escapeHtml(navState.authorName)}')">${escapeHtml(navState.authorName)}</span>`;
                 html += ` <span class="separator">&lt;</span> <span class="current">おみ句じ</span>`;
             }
         }
@@ -229,7 +232,7 @@ function renderPage(pageId) {
         navState.authorName = '';
         navState.kigoName = '';
     }
-    else if (pageId === 'kushuAuthorPage' || pageId === 'kushuDetailPage') navState.category = 'kushu';
+    else if (pageId === 'kushuAuthorPage' || pageId === 'kushuAuthorHubPage' || pageId === 'kushuChronoPage') navState.category = 'kushu';
     else if (pageId === 'saijikiPage') {
         navState.category = 'saijiki';
         renderSaijikiKigoList();
@@ -268,13 +271,12 @@ function adjustScrollAlignment(container) {
 }
 
 // ========================================================
-// 👥 句集（俳人別アーカイブ ＆ 時系列スクロール）
+// 👥 句集（俳人別アーカイブ ＆ 作者ハブ ＆ 時系列スクロール）
 // ========================================================
 
 let currentKushuAuthor = '';
-let currentKushuMode = 'chrono'; // 'chrono' | 'omikuji'
 
-// 🌸 句集：俳人一覧の表示
+// 🌸 句集：俳人一覧の表示（ルビなし）
 function showKushuAuthorList() {
     navState.category = 'kushu';
     navState.authorName = '';
@@ -311,18 +313,14 @@ function showKushuAuthorList() {
         const el = document.createElement('div'); 
         el.className = 'kushu-author-item'; 
         
-        let rubyHtml = escapeHtml(item.name);
-        if (item.kana && item.kana !== item.name) {
-            rubyHtml = `<ruby>${escapeHtml(item.name)}<rt>${escapeHtml(item.kana)}</rt></ruby>`;
-        }
-        
         const countStr = toKanjiNum(String(item.count)) + '句';
 
+        // 🌟 よみがなは不要のため排除
         el.innerHTML = `
-            <div class="kushu-author-name">${rubyHtml}</div>
+            <div class="kushu-author-name">${escapeHtml(item.name)}</div>
             <span class="kushu-count-badge">${countStr}</span>
         `;
-        el.onclick = () => showKushuAuthorDetail(item.name);
+        el.onclick = () => showKushuAuthorHub(item.name);
         container.appendChild(el);
     });
 
@@ -330,35 +328,37 @@ function showKushuAuthorList() {
     adjustScrollAlignment(container);
 }
 
-// 🌸 句集：俳人詳細（時系列スクロール画面）
-function showKushuAuthorDetail(authorName) {
+// 🌸 句集：作者選択ハブ画面（時系列 ｜ おみ句じ）
+function showKushuAuthorHub(authorName) {
     currentKushuAuthor = authorName;
     navState.category = 'kushu';
     navState.authorName = authorName;
-    switchKushuMode('chrono');
+    renderPage('kushuAuthorHubPage');
 }
 
-// 🌸 句集モード切替（時系列 ｜ おみ句じ）
-function switchKushuMode(mode) {
-    currentKushuMode = mode;
-    const tabChrono = document.getElementById('kmodeChrono');
-    const tabOmikuji = document.getElementById('kmodeOmikuji');
-    const toggleGroup = document.querySelector('.kushu-toggle-group');
+// 🌸 句集：時系列スクロール画面を開く
+function openKushuAuthorChrono() {
+    renderKushuChronoList();
+    renderPage('kushuChronoPage');
+}
 
-    if (tabChrono) tabChrono.classList.toggle('active', mode === 'chrono');
-    if (tabOmikuji) tabOmikuji.classList.toggle('active', mode === 'omikuji');
-
-    if (mode === 'chrono') {
-        if (toggleGroup) toggleGroup.style.display = 'flex';
-        renderKushuChronoList();
-    } else {
-        // おみ句じモード（当該作者の全句をランダム一句鑑賞）
-        if (toggleGroup) toggleGroup.style.display = 'none';
-        openRoom('author', currentKushuAuthor, currentKushuAuthor);
+// 🌸 句集：作者おみ句じを開く
+function openKushuAuthorOmikuji() {
+    navState.category = 'kushu';
+    currentDisplayType = 'kushu_author';
+    navState.isDetarame = false;
+    currentRoomHaikus = haikuDatabase.filter(item => item.author === currentKushuAuthor);
+    if (currentRoomHaikus.length === 0) {
+        alert('この作者の作品はまだ登録されていません。');
+        return;
     }
+    shuffleArray(currentRoomHaikus);
+    currentIndex = 0;
+    renderPage('roomPage');
+    updateHaikuDisplay();
 }
 
-// 🌸 句集：時系列スクロールの描画（発行年月セパレーター挿入）
+// 🌸 句集：時系列スクロールの描画（季語タグ排除、発行年月セパレーター挿入）
 function renderKushuChronoList() {
     const container = document.getElementById('kushuHaikuList');
     if (!container) return;
@@ -367,7 +367,6 @@ function renderKushuChronoList() {
     let authorHaikus = haikuDatabase.filter(h => h.author === currentKushuAuthor);
     if (authorHaikus.length === 0) {
         container.innerHTML = '<div style="writing-mode: vertical-rl; -webkit-writing-mode: vertical-rl; color: #888; margin: auto;">作品が登録されていません</div>';
-        renderPage('kushuDetailPage');
         return;
     }
 
@@ -405,22 +404,15 @@ function renderKushuChronoList() {
             container.appendChild(divider);
         }
 
-        // 句カード
+        // 句カード（🌟 季語タグは排除し、純粋な句のみを表示）
         const card = document.createElement('div');
         card.className = 'kushu-haiku-card';
-        
-        const kigoText = item.kigo ? escapeHtml(item.kigo) : '';
-        const seasonJa = SEASON_NAMES_JA[item.season] || '';
-        const tagText = kigoText ? `${kigoText}（${seasonJa}）` : seasonJa;
-
         card.innerHTML = `
             <div class="kushu-phrase">${formatRubyText(item.phrase)}</div>
-            ${tagText ? `<div class="kushu-kigo-tag">${tagText}</div>` : ''}
         `;
         container.appendChild(card);
     });
 
-    renderPage('kushuDetailPage');
     adjustScrollAlignment(container);
 }
 
@@ -1118,7 +1110,15 @@ function updateHaikuDisplay() {
     const infoTrigger = document.getElementById('infoTrigger');
     const mainTag = document.getElementById('roomMainTag');
 
-    if (['omikuji_all', 'haiku'].includes(navState.category) || (navState.category === 'utena_archive' && currentDisplayType === 'issue_all')) {
+    if (navState.category === 'kushu' && currentDisplayType === 'kushu_author') {
+        // 🌟 句集のおみ句じ：右上は作者名のみを表示
+        if (infoTrigger) infoTrigger.style.display = 'none';
+        if (mainTag) {
+            mainTag.className = 'info-upper-tag';
+            mainTag.innerText = currentKushuAuthor || currentHaiku.author;
+        }
+    }
+    else if (['omikuji_all', 'haiku'].includes(navState.category) || (navState.category === 'utena_archive' && currentDisplayType === 'issue_all')) {
         infoRevealed = false; 
         if (mainTag) mainTag.innerText = ''; 
         if (infoTrigger) infoTrigger.style.display = 'inline-block';

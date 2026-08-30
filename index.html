@@ -87,15 +87,19 @@
         <div id="kushuAuthorList" class="horizontal-scroll-container kushu-author-scroll-list"></div>
     </div>
 
-    <!-- 📜 句集：俳人詳細・時系列スクロール ページ -->
-    <div id="kushuDetailPage" class="layer-page kushu-detail-layer">
-        <!-- 上部コントロールバー（モード切替 ＆ 年月表示ON/OFF） -->
+    <!-- 🎴 句集：作者選択ハブ ページ（時系列 ｜ おみ句じ） -->
+    <div id="kushuAuthorHubPage" class="layer-page">
+        <div class="fits-screen-container">
+            <div class="vertical-link" onclick="openKushuAuthorChrono()">時系列</div>
+            <div class="vertical-link" onclick="openKushuAuthorOmikuji()">おみ句じ</div>
+        </div>
+    </div>
+
+    <!-- 📜 句集：時系列スクロール ページ -->
+    <div id="kushuChronoPage" class="layer-page kushu-detail-layer">
+        <!-- 上部コントロールバー（年月表示ON/OFF） -->
         <div class="kushu-control-bar">
-            <div class="kushu-mode-switch">
-                <span id="kmodeChrono" class="mode-tab active" onclick="switchKushuMode('chrono')">時系列</span>
-                <span class="mode-tab-divider">・</span>
-                <span id="kmodeOmikuji" class="mode-tab" onclick="switchKushuMode('omikuji')">おみ句じ</span>
-            </div>
+            <div class="kushu-author-title" id="kushuChronoAuthorTitle"></div>
             <div class="kushu-toggle-group">
                 <label class="kushu-toggle-label">
                     <span class="toggle-text">年月表示</span>

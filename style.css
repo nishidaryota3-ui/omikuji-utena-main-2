@@ -116,20 +116,12 @@ body, html {
 
 .kushu-control-bar {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     width: 90vw;
     max-width: 600px;
     margin: 4px auto 12px;
     z-index: 30;
-}
-
-.kushu-mode-switch {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 0.82rem;
-    letter-spacing: 0.12em;
 }
 
 /* 年月表示 ON/OFF トグルスイッチ */
@@ -205,15 +197,6 @@ body, html {
 }
 .kushu-phrase ruby { ruby-position: over; -webkit-ruby-position: over; }
 .kushu-phrase rt { font-size: 0.45em; color: #666666; }
-
-.kushu-kigo-tag {
-    writing-mode: vertical-rl;
-    -webkit-writing-mode: vertical-rl;
-    font-size: 0.8rem;
-    letter-spacing: 0.2em;
-    color: #8c8476;
-    margin-top: 3.5rem;
-}
 
 /* 🌸 発行年月セパレーター（令和八年八月号 等） */
 .kushu-issue-divider {
