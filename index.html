@@ -97,20 +97,69 @@
 
     <!-- 📜 句集：時系列スクロール ページ -->
     <div id="kushuChronoPage" class="layer-page kushu-detail-layer">
-        <!-- 上部コントロールバー（年月表示ON/OFF） -->
+        <!-- 上部コントロールバー（年月表示ON/OFF ＆ 印刷ボタン） -->
         <div class="kushu-control-bar">
             <div class="kushu-author-title" id="kushuChronoAuthorTitle"></div>
-            <div class="kushu-toggle-group">
+            <div class="kushu-control-actions">
                 <label class="kushu-toggle-label">
                     <span class="toggle-text">年月表示</span>
                     <input type="checkbox" id="kushuIssueDividerToggle" checked onchange="toggleKushuIssueDividers()">
                     <span class="toggle-slider"></span>
                 </label>
+                <button type="button" class="kushu-print-btn" onclick="openPrintModal()">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 3px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    印刷
+                </button>
             </div>
         </div>
 
         <!-- 時系列スクロールリスト -->
         <div id="kushuHaikuList" class="horizontal-scroll-container kushu-haiku-scroll-list"></div>
+    </div>
+
+    <!-- 🖨️ 句集 印刷設定モーダル -->
+    <div id="printSettingModal" class="card-overlay hidden" onclick="closePrintModal(event)">
+        <div class="print-modal-box" onclick="event.stopPropagation()">
+            <span class="card-close-btn" onclick="closePrintModal(event)">✕</span>
+            <div class="print-modal-title">句集の小冊子印刷 (PDF)</div>
+            
+            <!-- 印刷形式 -->
+            <div class="print-setting-row">
+                <span class="print-setting-label">印刷形式</span>
+                <div class="print-mode-switch-group">
+                    <button type="button" id="printModeSingleBtn" class="print-mode-btn active" onclick="setPrintMode('single')">片面手折り</button>
+                    <button type="button" id="printModeBookletBtn" class="print-mode-btn" onclick="setPrintMode('booklet')">両面小冊子</button>
+                </div>
+            </div>
+
+            <!-- 1ページの句数 -->
+            <div class="print-setting-row">
+                <span class="print-setting-label">1ページの句数</span>
+                <select id="printLinesPerPage" class="print-select-box" onchange="onPrintOptionChanged()">
+                    <option value="1">1句（ゆったり）</option>
+                    <option value="2">2句</option>
+                    <option value="3">3句（標準）</option>
+                    <option value="4">4句</option>
+                    <option value="5" selected>5句（うてな五句組）</option>
+                </select>
+            </div>
+
+            <!-- 発行年月の挿入 -->
+            <div class="print-setting-row">
+                <span class="print-setting-label">発行年月の挿入</span>
+                <div class="print-mode-switch-group">
+                    <button type="button" id="printYearMonthOnBtn" class="print-mode-btn active" onclick="setPrintYearMonth(true)">挿入する</button>
+                    <button type="button" id="printYearMonthOffBtn" class="print-mode-btn" onclick="setPrintYearMonth(false)">挿入しない</button>
+                </div>
+            </div>
+
+            <!-- 印刷実行ボタン -->
+            <div class="print-modal-actions">
+                <button type="button" class="print-exec-btn" onclick="executeKushuPrint()">印刷プレビュー (PDF) を開く</button>
+            </div>
+            
+            <div id="printSubNote" class="print-sub-note">※片面印刷：A4横に2ページ並べて印刷し、半分に折って重ねるだけの簡単製本</div>
+        </div>
     </div>
 
     <!-- 🌸 季寄せ：大画面 ページ（風月スタイル） -->

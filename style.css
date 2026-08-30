@@ -124,15 +124,40 @@ body, html {
     z-index: 30;
 }
 
-/* 年月表示 ON/OFF トグルスイッチ */
-.kushu-toggle-group {
+.kushu-control-actions {
     display: flex;
     align-items: center;
+    gap: 14px;
 }
+
+/* 🖨️ 印刷ボタン */
+.kushu-print-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border: 1px solid #d5cec2;
+    border-radius: 16px;
+    padding: 3px 11px;
+    font-size: 0.78rem;
+    color: #4a453e;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.05em;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    user-select: none;
+}
+.kushu-print-btn:hover {
+    background: #f4f0e8;
+    border-color: #7a7060;
+    color: #2b2b2b;
+}
+
+/* 年月表示 ON/OFF トグルスイッチ */
 .kushu-toggle-label {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     cursor: pointer;
     font-size: 0.78rem;
     color: #7a7060;
@@ -144,8 +169,8 @@ body, html {
 }
 .toggle-slider {
     position: relative;
-    width: 34px;
-    height: 18px;
+    width: 32px;
+    height: 17px;
     background-color: #dedad4;
     border-radius: 18px;
     transition: background-color 0.2s;
@@ -156,8 +181,8 @@ body, html {
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     background-color: #ffffff;
     border-radius: 50%;
     transition: transform 0.2s;
@@ -167,7 +192,106 @@ body, html {
     background-color: #2b2b2b;
 }
 .kushu-toggle-label input:checked + .toggle-slider::after {
-    transform: translateX(16px);
+    transform: translateX(15px);
+}
+
+/* ========================================================
+   🖨️ 印刷設定モーダル
+   ======================================================== */
+.print-modal-box {
+    position: relative;
+    background: #faf9f6;
+    border-radius: 16px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+    width: clamp(300px, 85vw, 420px);
+    padding: 24px 26px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.print-modal-title {
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: #2b2b2b;
+    letter-spacing: 0.1em;
+    text-align: center;
+    margin-bottom: 2px;
+}
+.print-setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+.print-setting-label {
+    font-size: 0.82rem;
+    color: #555555;
+    white-space: nowrap;
+}
+.print-mode-switch-group {
+    display: flex;
+    background: #eae6df;
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
+}
+.print-mode-btn {
+    border: none;
+    background: transparent;
+    padding: 4px 10px;
+    font-size: 0.76rem;
+    color: #777777;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+}
+.print-mode-btn.active {
+    background: #ffffff;
+    color: #2b2b2b;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.print-select-box {
+    padding: 4px 8px;
+    border: 1px solid #d5cec2;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 0.8rem;
+    color: #2b2b2b;
+    outline: none;
+    font-family: inherit;
+}
+.print-modal-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 4px;
+}
+.print-exec-btn {
+    width: 100%;
+    padding: 9px 16px;
+    border: none;
+    border-radius: 20px;
+    background: #2b2b2b;
+    color: #ffffff;
+    font-size: 0.88rem;
+    font-family: inherit;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+.print-exec-btn:hover {
+    background: #444444;
+}
+.print-exec-btn:active {
+    transform: scale(0.98);
+}
+.print-sub-note {
+    font-size: 0.72rem;
+    color: #888888;
+    text-align: center;
+    line-height: 1.4;
+    margin-top: -4px;
 }
 
 /* 句集 時系列スクロールリスト */

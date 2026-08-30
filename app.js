@@ -425,6 +425,519 @@ function toggleKushuIssueDividers() {
     });
 }
 
+// ========================================================
+// 🖨️ 句集の小冊子印刷・PDF出力（A4横・片面手折り ＆ 両面小冊子面付け）
+// ========================================================
+
+let currentPrintMode = 'single'; // 'single' | 'booklet'
+let printIncludeYearMonth = true; // true: 年月挿入する | false: 挿入しない
+
+function openPrintModal() {
+    const modal = document.getElementById('printSettingModal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closePrintModal(event) {
+    if (event) event.stopPropagation();
+    const modal = document.getElementById('printSettingModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function setPrintMode(mode) {
+    currentPrintMode = mode;
+    const singleBtn = document.getElementById('printModeSingleBtn');
+    const bookletBtn = document.getElementById('printModeBookletBtn');
+    const noteEl = document.getElementById('printSubNote');
+
+    if (singleBtn) singleBtn.classList.toggle('active', mode === 'single');
+    if (bookletBtn) bookletBtn.classList.toggle('active', mode === 'booklet');
+
+    if (noteEl) {
+        if (mode === 'single') {
+            noteEl.innerText = '※片面印刷：A4横に2ページ並べて印刷し、半分に折って重ねるだけの簡単製本';
+        } else {
+            noteEl.innerText = '※両面小冊子：コンビニやプリンターの両面印刷（短辺とじ）で二つ折り中綴じ製本';
+        }
+    }
+}
+
+function setPrintYearMonth(include) {
+    printIncludeYearMonth = include;
+    const onBtn = document.getElementById('printYearMonthOnBtn');
+    const offBtn = document.getElementById('printYearMonthOffBtn');
+    if (onBtn) onBtn.classList.toggle('active', include === true);
+    if (offBtn) offBtn.classList.toggle('active', include === false);
+}
+
+function onPrintOptionChanged() {
+    // 句数変更時のフック
+}
+
+// 🖨️ 印刷実行（独立iframeによる高精度PDF出力）
+function executeKushuPrint() {
+    if (!currentKushuAuthor) {
+        alert('作者が選択されていません。');
+        return;
+    }
+
+    const selectEl = document.getElementById('printLinesPerPage');
+    const linesPerPage = selectEl ? (parseInt(selectEl.value, 10) || 5) : 5;
+
+    // 当該作者の全句を時系列順に抽出
+    let authorHaikus = haikuDatabase.filter(h => h.author === currentKushuAuthor);
+    if (authorHaikus.length === 0) {
+        alert('印刷できる作品がありません。');
+        return;
+    }
+
+    // 時系列ソート
+    authorHaikus.sort((a, b) => {
+        const yearA = parseInt(a.issueYear, 10) || 0;
+        const yearB = parseInt(b.issueYear, 10) || 0;
+        if (yearA !== yearB) return yearA - yearB;
+        const monthA = parseInt(a.issueMonth, 10) || 0;
+        const monthB = parseInt(b.issueMonth, 10) || 0;
+        if (monthA !== monthB) return monthA - monthB;
+        return (a.orderInIssue || 0) - (b.orderInIssue || 0);
+    });
+
+    const bookletTitle = `${currentKushuAuthor} 句集`;
+
+    // ページ分割（Pagination）ロジック
+    const haikuPages = [];
+
+    if (printIncludeYearMonth) {
+        // 🌟 年月を挿入する方式：号ごとにグループ化し、先頭に年月見出しを配置
+        let issueMap = new Map();
+        authorHaikus.forEach(h => {
+            const eraStr = h.issueYear ? toJapaneseEra(h.issueYear) : '';
+            const monthStr = h.issueMonth ? toKanjiMonth(h.issueMonth) : '';
+            const key = `${eraStr}${monthStr}` || '無題';
+            if (!issueMap.has(key)) issueMap.set(key, []);
+            issueMap.get(key).push(h);
+        });
+
+        issueMap.forEach((haikusInIssue, issueLabel) => {
+            // 各号の句を linesPerPage ずつページに分ける
+            for (let i = 0; i < haikusInIssue.length; i += linesPerPage) {
+                const isFirstPageOfIssue = (i === 0);
+                haikuPages.push({
+                    type: 'body',
+                    issueLabel: isFirstPageOfIssue ? issueLabel : '',
+                    hasHeader: isFirstPageOfIssue,
+                    haikus: haikusInIssue.slice(i, i + linesPerPage)
+                });
+            }
+        });
+    } else {
+        // 年月を挿入しない方式：全句を均等に linesPerPage 句ずつ分割
+        for (let i = 0; i < authorHaikus.length; i += linesPerPage) {
+            haikuPages.push({
+                type: 'body',
+                issueLabel: '',
+                hasHeader: false,
+                haikus: authorHaikus.slice(i, i + linesPerPage)
+            });
+        }
+    }
+
+    // 既存の印刷用iframeがあれば削除
+    let printIframe = document.getElementById('utena_print_iframe');
+    if (printIframe) printIframe.remove();
+
+    printIframe = document.createElement('iframe');
+    printIframe.id = 'utena_print_iframe';
+    printIframe.style.position = 'fixed';
+    printIframe.style.top = '0px';
+    printIframe.style.left = '0px';
+    printIframe.style.width = '297mm';
+    printIframe.style.height = '210mm';
+    printIframe.style.opacity = '0';
+    printIframe.style.pointerEvents = 'none';
+    printIframe.style.zIndex = '-9999';
+    printIframe.style.border = 'none';
+    document.body.appendChild(printIframe);
+
+    const doc = printIframe.contentWindow.document;
+    doc.open();
+
+    let sheetsHtml = '';
+
+    // 半面ページ（A5縦相当）のHTMLレンダリングヘルパー
+    function renderHalfPageHtml(pageObj) {
+        if (!pageObj || pageObj.type === 'blank') {
+            return `
+                <div class="sheet-half">
+                    <div class="sheet-half-content"></div>
+                    <div class="print-nombre"></div>
+                </div>
+            `;
+        }
+        if (pageObj.type === 'cover') {
+            return `
+                <div class="sheet-half cover-half">
+                    <div class="sheet-half-content cover-content">
+                        <div class="print-cover-title">${escapeHtml(bookletTitle)}</div>
+                        <div class="print-cover-author">${escapeHtml(currentKushuAuthor)}</div>
+                    </div>
+                    <div class="print-nombre"></div>
+                </div>
+            `;
+        }
+        if (pageObj.type === 'tobira') {
+            return `
+                <div class="sheet-half tobira-half">
+                    <div class="sheet-half-content tobira-content">
+                        <div class="print-tobira-title">${escapeHtml(bookletTitle)}</div>
+                    </div>
+                    <div class="print-nombre"></div>
+                </div>
+            `;
+        }
+        if (pageObj.type === 'colophon') {
+            return `
+                <div class="sheet-half colophon-half">
+                    <div class="sheet-half-content colophon-content">
+                        <div class="print-colophon-box">
+                            <div class="print-colophon-title">${escapeHtml(bookletTitle)}</div>
+                            <div class="print-colophon-author">著者　${escapeHtml(currentKushuAuthor)}</div>
+                            <div class="print-colophon-brand">うてな俳句 謹製</div>
+                        </div>
+                    </div>
+                    <div class="print-nombre"></div>
+                </div>
+            `;
+        }
+
+        // 本文ページ
+        let headerHtml = '';
+        if (pageObj.hasHeader && pageObj.issueLabel) {
+            headerHtml = `<div class="print-issue-header">${escapeHtml(pageObj.issueLabel)}</div>`;
+        }
+
+        const linesHtml = (pageObj.haikus || []).map(h => `<div class="print-phrase-line">${formatPrintRubyText(h.phrase)}</div>`).join('');
+        const nombreHtml = pageObj.pageNumber ? `- ${pageObj.pageNumber} -` : '';
+
+        const isDenseLayout = (pageObj.hasHeader && (pageObj.haikus || []).length >= 4) || (pageObj.haikus || []).length >= 5;
+
+        return `
+            <div class="sheet-half ${isDenseLayout ? 'dense-layout' : ''}">
+                <div class="sheet-half-content">
+                    ${headerHtml}
+                    ${linesHtml}
+                </div>
+                <div class="print-nombre">${nombreHtml}</div>
+            </div>
+        `;
+    }
+
+    if (currentPrintMode === 'single') {
+        // ==========================================
+        // 🅰️ 片面手折り（A4横に2面配置、右から左へ流れる）
+        // ==========================================
+        // Sheet 1: 表紙シート（右面: 表紙、左面: 余白）
+        sheetsHtml += `
+            <div class="print-sheet">
+                <div class="sheet-half">
+                    <div class="sheet-half-content"></div>
+                    <div class="print-nombre"></div>
+                </div>
+                <div class="sheet-divider"></div>
+                ${renderHalfPageHtml({ type: 'cover' })}
+            </div>
+        `;
+
+        // Sheet 2以降: 本文見開き
+        let pageNumCounter = 1;
+        for (let i = 0; i < haikuPages.length; i += 2) {
+            const rightPageObj = { ...haikuPages[i], pageNumber: pageNumCounter++ };
+            const leftPageObj = haikuPages[i + 1] ? { ...haikuPages[i + 1], pageNumber: pageNumCounter++ } : { type: 'blank' };
+
+            sheetsHtml += `
+                <div class="print-sheet">
+                    ${renderHalfPageHtml(leftPageObj)}
+                    <div class="sheet-divider"></div>
+                    ${renderHalfPageHtml(rightPageObj)}
+                </div>
+            `;
+        }
+
+        // 最終奥付シート
+        sheetsHtml += `
+            <div class="print-sheet">
+                ${renderHalfPageHtml({ type: 'colophon' })}
+                <div class="sheet-divider"></div>
+                <div class="sheet-half"><div class="sheet-half-content"></div><div class="print-nombre"></div></div>
+            </div>
+        `;
+    } else {
+        // ==========================================
+        // 🅱️ 両面小冊子（コンビニ中綴じ面付け・右綴じ）
+        // ==========================================
+        const logicalPages = [];
+        logicalPages.push({ type: 'cover' });
+        logicalPages.push({ type: 'tobira' });
+
+        haikuPages.forEach((p, idx) => {
+            logicalPages.push({ ...p, pageNumber: idx + 1 });
+        });
+
+        logicalPages.push({ type: 'colophon' });
+
+        // 4の倍数になるよう白紙パディング
+        while (logicalPages.length % 4 !== 0) {
+            logicalPages.splice(logicalPages.length - 1, 0, { type: 'blank' });
+        }
+
+        const totalPages = logicalPages.length;
+        const totalSheets = totalPages / 4;
+
+        // 面付けループ
+        for (let s = 1; s <= totalSheets; s++) {
+            // 表面（オモテ）: [ 左: Page 2s - 1 | 右: Page N - 2s + 2 ]
+            const leftIdxFront = (2 * s - 1) - 1;
+            const rightIdxFront = (totalPages - 2 * s + 2) - 1;
+
+            sheetsHtml += `
+                <div class="print-sheet">
+                    ${renderHalfPageHtml(logicalPages[leftIdxFront])}
+                    <div class="sheet-divider"></div>
+                    ${renderHalfPageHtml(logicalPages[rightIdxFront])}
+                </div>
+            `;
+
+            // 裏面（ウラ）: [ 左: Page N - 2s + 1 | 右: Page 2s ]
+            const leftIdxBack = (totalPages - 2 * s + 1) - 1;
+            const rightIdxBack = (2 * s) - 1;
+
+            sheetsHtml += `
+                <div class="print-sheet">
+                    ${renderHalfPageHtml(logicalPages[leftIdxBack])}
+                    <div class="sheet-divider"></div>
+                    ${renderHalfPageHtml(logicalPages[rightIdxBack])}
+                </div>
+            `;
+        }
+    }
+
+    // 独立iframe内の完全な印刷用HTMLドキュメント
+    const fullPrintHtml = `
+        <!DOCTYPE html>
+        <html lang="ja">
+        <head>
+            <meta charset="UTF-8">
+            <title>${escapeHtml(bookletTitle)}</title>
+            <style>
+                @page {
+                    size: A4 landscape;
+                    margin: 0;
+                }
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+                body, html {
+                    width: 297mm;
+                    height: 210mm;
+                    background: #ffffff;
+                    color: #111111;
+                    font-family: "游明朝", "Yu Mincho", "ヒラギノ明朝 ProN", "Hiragino Mincho ProN", "Shippori Mincho", "MS P明朝", serif;
+                }
+                .print-sheet {
+                    width: 297mm;
+                    height: 210mm;
+                    page-break-after: always;
+                    break-after: page;
+                    display: flex;
+                    flex-direction: row;
+                    position: relative;
+                    overflow: hidden;
+                    background: #ffffff;
+                }
+                .sheet-divider {
+                    position: absolute;
+                    top: 0;
+                    left: 148.5mm;
+                    width: 0;
+                    height: 210mm;
+                    border-left: 0.5px dashed rgba(0, 0, 0, 0.12);
+                }
+                .sheet-half {
+                    width: 148.5mm;
+                    height: 210mm;
+                    padding: 22mm 18mm 18mm;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    align-items: center;
+                    position: relative;
+                }
+                .sheet-half-content {
+                    writing-mode: vertical-rl;
+                    -webkit-writing-mode: vertical-rl;
+                    display: flex;
+                    flex-direction: row;
+                    justify-content: space-evenly;
+                    align-items: flex-start;
+                    height: 160mm;
+                    width: 100%;
+                }
+                /* 5句＋年月などの高密度レイアウト対応 */
+                .sheet-half.dense-layout .sheet-half-content {
+                    justify-content: space-between;
+                }
+                .sheet-half.dense-layout .print-phrase-line {
+                    font-size: 11pt;
+                    letter-spacing: 0.22em;
+                    line-height: 1.5;
+                }
+                .sheet-half.dense-layout .print-issue-header {
+                    font-size: 10pt;
+                    padding-right: 2.5mm;
+                    margin-left: 3mm;
+                }
+
+                .print-phrase-line {
+                    writing-mode: vertical-rl;
+                    -webkit-writing-mode: vertical-rl;
+                    font-size: 12.5pt;
+                    letter-spacing: 0.26em;
+                    line-height: 1.6;
+                    color: #1a1a1a;
+                    white-space: nowrap;
+                }
+                .print-phrase-line ruby {
+                    ruby-position: over;
+                    -webkit-ruby-position: over;
+                }
+                .print-phrase-line rt {
+                    font-size: 0.45em;
+                    color: #555555;
+                    letter-spacing: 0.05em;
+                }
+
+                .print-issue-header {
+                    writing-mode: vertical-rl;
+                    -webkit-writing-mode: vertical-rl;
+                    font-size: 11pt;
+                    font-weight: 600;
+                    letter-spacing: 0.28em;
+                    color: #2b2b2b;
+                    border-right: 1.5pt solid #333333;
+                    padding-right: 3.5mm;
+                    margin-left: 4mm;
+                    white-space: nowrap;
+                }
+
+                .print-nombre {
+                    font-size: 8.5pt;
+                    color: #888888;
+                    font-family: serif;
+                    letter-spacing: 0.1em;
+                    text-align: center;
+                    margin-top: 4mm;
+                }
+
+                /* 表紙 */
+                .cover-half {
+                    justify-content: center;
+                }
+                .cover-content {
+                    align-items: center;
+                    justify-content: center;
+                    gap: 12mm;
+                }
+                .print-cover-title {
+                    font-size: 26pt;
+                    font-weight: 600;
+                    letter-spacing: 0.35em;
+                    color: #1a1a1a;
+                }
+                .print-cover-author {
+                    font-size: 14pt;
+                    letter-spacing: 0.3em;
+                    color: #444444;
+                    margin-top: 8mm;
+                }
+
+                /* 扉 */
+                .tobira-half {
+                    justify-content: center;
+                }
+                .tobira-content {
+                    align-items: center;
+                    justify-content: center;
+                }
+                .print-tobira-title {
+                    font-size: 20pt;
+                    font-weight: 500;
+                    letter-spacing: 0.3em;
+                    color: #333333;
+                }
+
+                /* 奥付 */
+                .colophon-half {
+                    justify-content: center;
+                }
+                .colophon-content {
+                    align-items: center;
+                    justify-content: center;
+                }
+                .print-colophon-box {
+                    border: 0.8pt solid #666666;
+                    padding: 10mm 8mm;
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    gap: 6mm;
+                    min-height: 90mm;
+                }
+                .print-colophon-title {
+                    font-size: 13pt;
+                    font-weight: 600;
+                    letter-spacing: 0.25em;
+                }
+                .print-colophon-author {
+                    font-size: 10pt;
+                    letter-spacing: 0.2em;
+                    color: #333333;
+                }
+                .print-colophon-brand {
+                    font-size: 8.5pt;
+                    letter-spacing: 0.2em;
+                    color: #666666;
+                    margin-top: 4mm;
+                }
+            </style>
+        </head>
+        <body>
+            ${sheetsHtml}
+        </body>
+        </html>
+    `;
+
+    doc.write(fullPrintHtml);
+    doc.close();
+
+    closePrintModal();
+
+    // 印刷ダイアログを起動
+    setTimeout(() => {
+        printIframe.contentWindow.focus();
+        printIframe.contentWindow.print();
+    }, 400);
+}
+
+// 印刷用ルビ変換ヘルパー
+function formatPrintRubyText(text) {
+    if (!text) return '';
+    return text.replace(/｜(.+?)《(.+?)》/g, '<ruby>$1<rt>$2</rt></ruby>')
+               .replace(/([\u4E00-\u9FFF々〆ヵヶ]+)《(.+?)》/g, '<ruby>$1<rt>$2</rt></ruby>');
+}
+
 // 🔍 季語インクリメンタル検索
 // ========================================================
 // 🌸 季寄せ・歳時記 大画面（風月スタイル ＋ 例句大画面スクロール）
