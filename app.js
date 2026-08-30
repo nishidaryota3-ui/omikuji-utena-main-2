@@ -709,8 +709,11 @@ function updateHaikuDisplay() {
     if (phraseEl) {
         phraseEl.innerHTML = formatRubyText(currentHaiku.phrase);
 
-        // 🌟 文字数に応じた動的文字サイズ調整（最大20文字でも画面上下で絶対に折り返さず一列表示）
+        // 🌟 文字数に応じた動的文字サイズ調整
+        // ルビ（《...》、[... ]、（...）、<rt>...</rt>）を完全に除外して純粋な本体の文字数のみを正確にカウント！
         const plainText = (currentHaiku.phrase || '')
+            .replace(/｜/g, '')
+            .replace(/《[^》]*?》/g, '')
             .replace(/\[[^\]]*?\]/g, '')
             .replace(/[（(][^）)]*?[）)]/g, '')
             .replace(/<rt>.*?<\/rt>/g, '')
@@ -718,7 +721,7 @@ function updateHaikuDisplay() {
             .replace(/[\s　]/g, '');
         const charCount = plainText.length || 17;
 
-        const isLarge = (appSettings.fontSize === 'large');
+        const isLarge = (typeof appSettings !== 'undefined' && appSettings.fontSize === 'large');
         if (charCount > 17) {
             // 17文字超（最大20文字超）の場合は縦幅に合わせて文字サイズと文字間隔を自動最適化
             const maxVh = isLarge ? 64 : 60;
@@ -726,7 +729,7 @@ function updateHaikuDisplay() {
             phraseEl.style.fontSize = `min(${dynamicVh.toFixed(2)}vh, ${isLarge ? 28 : 24}px)`;
             phraseEl.style.letterSpacing = isLarge ? '0.12em' : '0.15em';
         } else {
-            // 通常（17文字以内）はCSSのデフォルトクラスを適用
+            // 通常（17文字以内）はCSSのデフォルトクラス（または設定サイズ）を適用
             phraseEl.style.fontSize = '';
             phraseEl.style.letterSpacing = '';
         }

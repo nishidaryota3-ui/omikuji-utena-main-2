@@ -52,13 +52,17 @@ function toKanjiMonth(month) {
 }
 
 /**
- * 「漢字(よみ)」または「漢字[よみ]」形式のテキストを <ruby> タグに整形
+ * 「漢字《よみ》」「漢字(よみ)」「漢字[よみ]」形式のテキストを <ruby> タグに整形
  */
 function formatRubyText(text) {
-    if (!text) return "";
+    if (!text) return '';
     
+    // 《よみがな》青空文庫形式（例: ｜逃散《ちようさん》 または 猿《ましら》）
+    let formatted = text.replace(/｜(.+?)《(.+?)》/g, '<span class="ruby-wrap"><ruby>$1<rt>$2</rt></ruby></span>')
+                        .replace(/([\u4E00-\u9FFF々〆ヵヶ]+)《(.+?)》/g, '<span class="ruby-wrap"><ruby>$1<rt>$2</rt></ruby></span>');
+
     // [よみがな] 形式
-    let formatted = text.replace(/([一-龠々〆ヵヶ]+)\[(.*?)\]/g, '<span class="ruby-wrap"><ruby>$1<rt>$2</rt></ruby></span>');
+    formatted = formatted.replace(/([一-龠々〆ヵヶ]+)\[(.*?)\]/g, '<span class="ruby-wrap"><ruby>$1<rt>$2</rt></ruby></span>');
     // (よみがな) 形式
     formatted = formatted.replace(/([一-龠々〆ヵヶ]+)[（(]([ぁ-んァ-ヶー]+)[）)]/g, '<span class="ruby-wrap"><ruby>$1<rt>$2</rt></ruby></span>');
     
