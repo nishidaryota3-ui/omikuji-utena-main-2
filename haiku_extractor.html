@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>俳句会誌 PDF抽出ツール</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 30px; line-height: 1.6; color: #333; }
+    .container { max-width: 900px; margin: 0 auto; }
+    .card { background: #f8f9fa; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-weight: bold; margin-bottom: 5px; }
+    input[type="text"], input[type="file"] { width: 100%; padding: 8px; box-sizing: border-box; }
+    button { background: #0066cc; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    #status { margin-top: 15px; font-weight: bold; }
+    #errorLog { margin-top: 10px; color: #d9534f; background: #fff0f0; padding: 10px; border-radius: 4px; display: none; white-space: pre-wrap; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #eee; }
+    .btn-copy { background: #28a745; margin-right: 10px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>俳句会誌 PDF 構造化抽出ツール</h2>
+  
+  <div class="card">
+    <div class="form-group">
+      <label for="apiKey">Gemini API Key:</label>
+      <input type="text" id="apiKey" placeholder="APIキーを貼り付け">
+    </div>
+    
+    <div class="form-group">
+      <label for="pdfFile">会誌のPDFファイル:</label>
+      <input type="file" id="pdfFile" accept="application/pdf">
+    </div>
+
+    <div class="form-group">
+      <label for="pageRange">処理対象ページ（テスト時は 2-3 推奨）:</label>
+      <input type="text" id="pageRange" value="2-3">
+    </div>
+
+    <button id="startBtn" onclick="processPdf()">抽出開始</button>
+    <div id="status"></div>
+    <div id="errorLog"></div>
+  </div>
+
+  <div id="resultArea" style="display: none;">
+    <button class="btn-copy" onclick="copyTSV()">スプレッドシート用にコピー (TSV)</button>
+    <button class="btn-copy" style="background:#17a2b8;" onclick="downloadCSV()">CSVダウンロード</button>
+    <table id="resultTable">
+      <thead>
+        <tr>
+          <th>ページ</th>
+          <th>コーナー名</th>
+          <th>作者</th>
+          <th>俳句</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let extractedData = [];
+
+function parsePageRange(rangeStr, maxPages) {
+  const pages = new Set();
+  const parts = rangeStr.split(',');
+  for (let part of parts) {
+    part = part.trim();
+    if (part.includes('-')) {
+      const [start, end] = part.split('-').map(Number);
+      for (let i = start; i <= end; i++) {
+        if (i >= 1 && i <= maxPages) pages.add(i);
+      }
+    } else {
+      const num = Number(part);
+      if (num >= 1 && num <= maxPages) pages.add(num);
+    }
+  }
+  return Array.from(pages).sort((a, b) => a - b);
+}
+
+async function renderPageToBase64(page) {
+  const viewport = page.getViewport({ scale: 2.0 });
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+
+  await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+  return canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+}
+
+async function callGemini(apiKey, base64Image) {
+  // 利用可能なモデル候補（最新順に試行）
+  const candidateModels = [
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash'
+  ];
+
+  const prompt = `この画像は俳句会誌のページです。縦書きの俳句と作者名を抽出し、JSON配列形式のみで返してください。
+【必須ルール】
+1. ルビ（ふりがな）は完全に除去し、本文の漢字・仮名のみにしてください。
+2. 俳句の作品のみを抽出し、随筆・コラム・解説文・広告・目次などは完全に除外してください。
+3. 出力スキーマ: [{"section": "コーナー名", "author": "作者名", "haiku": "俳句"}]`;
+
+  const payload = {
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: "image/jpeg", data: base64Image } }
+      ]
+    }],
+    generationConfig: {
+      response_mime_type: "application/json"
+    }
+  };
+
+  let lastError = null;
+
+  for (const model of candidateModels) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        const resJson = await response.json();
+        const text = resJson.candidates[0].content.parts[0].text;
+        return JSON.parse(text);
+      } else {
+        const errText = await response.text();
+        lastError = new Error(`Model ${model} (HTTP ${response.status}): ${errText}`);
+      }
+    } catch (e) {
+      lastError = e;
+    }
+  }
+
+  throw lastError || new Error("利用可能なGeminiモデルが見つかりませんでした。");
+}
+
+async function processPdf() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const fileInput = document.getElementById('pdfFile');
+  const rangeInput = document.getElementById('pageRange').value.trim();
+  const status = document.getElementById('status');
+  const errorLog = document.getElementById('errorLog');
+  const startBtn = document.getElementById('startBtn');
+
+  if (!apiKey) return alert('API Key を入力してください。');
+  if (!fileInput.files.length) return alert('PDFファイルを選択してください。');
+
+  startBtn.disabled = true;
+  errorLog.style.display = 'none';
+  errorLog.innerText = '';
+  extractedData = [];
+  document.querySelector('#resultTable tbody').innerHTML = '';
+  document.getElementById('resultArea').style.display = 'none';
+
+  try {
+    const file = fileInput.files[0];
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const targetPages = parsePageRange(rangeInput, pdf.numPages);
+
+    for (let i = 0; i < targetPages.length; i++) {
+      const pageNum = targetPages[i];
+      status.innerText = `処理中: ページ ${pageNum} / ${pdf.numPages} (${i + 1}/${targetPages.length})...`;
+
+      const page = await pdf.getPage(pageNum);
+      const base64Img = await renderPageToBase64(page);
+      
+      try {
+        const items = await callGemini(apiKey, base64Img);
+        if (Array.isArray(items)) {
+          items.forEach(item => {
+            if (item.haiku) {
+              extractedData.push({ page: pageNum, ...item });
+              addTableRow(pageNum, item);
+            }
+          });
+        }
+      } catch (err) {
+        console.error(`Page ${pageNum} エラー:`, err);
+        errorLog.style.display = 'block';
+        errorLog.innerText += `\n[P.${pageNum} エラー] ${err.message}`;
+      }
+
+      await new Promise(res => setTimeout(res, 1200));
+    }
+
+    status.innerText = `完了！ 合計 ${extractedData.length} 句を抽出しました。`;
+    if (extractedData.length > 0) {
+      document.getElementById('resultArea').style.display = 'block';
+    }
+  } catch (error) {
+    status.innerText = `処理を中断しました`;
+    errorLog.style.display = 'block';
+    errorLog.innerText = `エラー詳細: ${error.message}`;
+  } finally {
+    startBtn.disabled = false;
+  }
+}
+
+function addTableRow(pageNum, item) {
+  const tbody = document.querySelector('#resultTable tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${pageNum}</td><td>${item.section || ''}</td><td>${item.author || ''}</td><td>${item.haiku || ''}</td>`;
+  tbody.appendChild(tr);
+}
+
+function copyTSV() {
+  let tsv = "ページ\tコーナー\t作者\t俳句\n";
+  extractedData.forEach(d => {
+    tsv += `${d.page}\t${d.section || ''}\t${d.author || ''}\t${d.haiku || ''}\n`;
+  });
+  navigator.clipboard.writeText(tsv).then(() => {
+    alert('スプレッドシート貼り付け用（TSV）にコピーしました！そのまま貼り付けできます。');
+  });
+}
+
+function downloadCSV() {
+  let csv = "\uFEFFページ,コーナー,作者,俳句\n";
+  extractedData.forEach(d => {
+    const section = `"${(d.section || '').replace(/"/g, '""')}"`;
+    const author = `"${(d.author || '').replace(/"/g, '""')}"`;
+    const haiku = `"${(d.haiku || '').replace(/"/g, '""')}"`;
+    csv += `${d.page},${section},${author},${haiku}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'haiku_list.csv';
+  a.click();
+}
+</script>
+</body>
+</html>
