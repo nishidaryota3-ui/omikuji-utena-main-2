@@ -510,10 +510,11 @@ function executeKushuPrint() {
     const bookletTitle = `${currentKushuAuthor} 句集`;
 
     // 🌟 ページ分割（Pagination）ロジック：
-    // 年月が変わっても無駄に改ページせず、1ページあたり linesPerPage 句ずつ連続してストリーム配置
+    // 年月見出しも俳句と同じ「1列」としてカウントし、1ページ最大列数（例: 5句+日付=6列）で均等分割
+    const maxColumnsPerPage = printIncludeYearMonth ? (linesPerPage + 1) : linesPerPage;
     const haikuPages = [];
     let currentPageItems = [];
-    let currentHaikuCountInPage = 0;
+    let currentColumnCountInPage = 0;
     let lastIssueKey = '';
 
     authorHaikus.forEach(h => {
@@ -522,22 +523,31 @@ function executeKushuPrint() {
             const monthStr = h.issueMonth ? toKanjiMonth(h.issueMonth) : '';
             const currentIssueKey = `${eraStr}${monthStr}`;
             
-            // 号が変わったら年月見出しを挿入
+            // 号が変わったら年月見出しを1列として挿入
             if (currentIssueKey && currentIssueKey !== lastIssueKey) {
                 lastIssueKey = currentIssueKey;
+                
+                // もしページがいっぱいなら次ページへ
+                if (currentColumnCountInPage >= maxColumnsPerPage) {
+                    haikuPages.push({ type: 'body', items: currentPageItems });
+                    currentPageItems = [];
+                    currentColumnCountInPage = 0;
+                }
+                
                 currentPageItems.push({ type: 'header', text: currentIssueKey });
+                currentColumnCountInPage++;
             }
         }
 
-        currentPageItems.push({ type: 'haiku', data: h });
-        currentHaikuCountInPage++;
-
-        // 1ページの句数上限に達したら次ページへ
-        if (currentHaikuCountInPage >= linesPerPage) {
+        // もしページがいっぱいなら次ページへ
+        if (currentColumnCountInPage >= maxColumnsPerPage) {
             haikuPages.push({ type: 'body', items: currentPageItems });
             currentPageItems = [];
-            currentHaikuCountInPage = 0;
+            currentColumnCountInPage = 0;
         }
+
+        currentPageItems.push({ type: 'haiku', data: h });
+        currentColumnCountInPage++;
     });
 
     // 残りの句があれば最後のページとして追加
@@ -840,18 +850,17 @@ function executeKushuPrint() {
                     letter-spacing: 0.05em;
                 }
 
-                /* 🌟 年月見出し：縦書き、文字と同じ長さの右線 */
+                /* 🌟 年月見出し：縦書き独立行（横線なしの美しい文字組み） */
                 .print-issue-header {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
                     display: block;
-                    font-size: 10pt;
+                    font-size: 11pt;
                     font-weight: 600;
                     letter-spacing: 0.28em;
                     color: #222222;
-                    border-right: 1.2pt solid #222222;
-                    padding-right: 2.5mm;
                     margin: 0;
+                    padding: 0;
                     white-space: nowrap;
                     height: fit-content;
                 }
