@@ -590,11 +590,8 @@ function executeKushuPrint() {
         if (pageObj.type === 'cover') {
             return `
                 <div class="sheet-half">
-                    <div class="sheet-half-content centered-content">
-                        <div class="cover-box">
-                            <div class="print-cover-title">${escapeHtml(bookletTitle)}</div>
-                            <div class="print-cover-author">${escapeHtml(currentKushuAuthor)}</div>
-                        </div>
+                    <div class="sheet-half-content cover-page-content">
+                        <div class="print-cover-title">${escapeHtml(currentKushuAuthor)}　句集</div>
                     </div>
                     <div class="print-nombre"></div>
                 </div>
@@ -603,10 +600,8 @@ function executeKushuPrint() {
         if (pageObj.type === 'tobira') {
             return `
                 <div class="sheet-half">
-                    <div class="sheet-half-content centered-content">
-                        <div class="tobira-box">
-                            <div class="print-tobira-title">${escapeHtml(bookletTitle)}</div>
-                        </div>
+                    <div class="sheet-half-content cover-page-content">
+                        <div class="print-tobira-title">${escapeHtml(currentKushuAuthor)}　句集</div>
                     </div>
                     <div class="print-nombre"></div>
                 </div>
@@ -615,11 +610,10 @@ function executeKushuPrint() {
         if (pageObj.type === 'colophon') {
             return `
                 <div class="sheet-half">
-                    <div class="sheet-half-content centered-content">
-                        <div class="print-colophon-box">
-                            <div class="print-colophon-title">${escapeHtml(bookletTitle)}</div>
-                            <div class="print-colophon-author">著者　${escapeHtml(currentKushuAuthor)}</div>
-                            <div class="print-colophon-brand">うてな俳句 謹製</div>
+                    <div class="sheet-half-content colophon-page-content">
+                        <div class="colophon-left-block">
+                            <div class="print-colophon-brand">うてな俳句会</div>
+                            <img src="./stamp_utena.png" class="print-colophon-stamp" alt="うてな">
                         </div>
                     </div>
                     <div class="print-nombre"></div>
@@ -627,9 +621,8 @@ function executeKushuPrint() {
             `;
         }
 
-        // 本文ページ：アイテム（年月見出し／俳句）を均等割り付けコンテナに展開
+        // 本文ページ：アイテム（年月見出し／俳句）を右端から固定ピッチで展開
         let innerHtml = '';
-        const itemCount = (pageObj.items || []).length;
         (pageObj.items || []).forEach(item => {
             if (item.type === 'header') {
                 innerHtml += `<div class="print-issue-header">${escapeHtml(item.text)}</div>`;
@@ -639,11 +632,10 @@ function executeKushuPrint() {
         });
 
         const nombreHtml = pageObj.pageNumber ? `- ${pageObj.pageNumber} -` : '';
-        const layoutClass = itemCount <= 1 ? 'single-item' : (itemCount === 2 ? 'two-items' : (itemCount === 3 ? 'three-items' : 'multi-items'));
 
         return `
             <div class="sheet-half">
-                <div class="sheet-half-content ${layoutClass}">
+                <div class="sheet-half-content">
                     ${innerHtml}
                 </div>
                 <div class="print-nombre">${nombreHtml}</div>
@@ -740,6 +732,9 @@ function executeKushuPrint() {
         }
     }
 
+    // 🌟 全ページで統一される列間隔（ピッチ）の計算
+    const columnGap = maxColumnsPerPage >= 6 ? '18.0mm' : (maxColumnsPerPage === 5 ? '23.5mm' : (maxColumnsPerPage === 4 ? '32.0mm' : (maxColumnsPerPage === 3 ? '45.0mm' : (maxColumnsPerPage === 2 ? '70.0mm' : '0mm'))));
+
     // 独立iframe内の完全な印刷用HTMLドキュメント
     const fullPrintHtml = `
         <!DOCTYPE html>
@@ -812,18 +807,10 @@ function executeKushuPrint() {
                     left: 16mm;
                     right: 16mm;
                     display: flex;
-                    flex-direction: row-reverse; /* 🌟 右から左へ並べる！（日本語の正しい縦書き順） */
-                    justify-content: space-between; /* 🌟 左右均等割り付け！（右端から左端まで均等に広がる） */
-                    align-items: center;            /* 🌟 上下方向完全中央揃え！ */
-                }
-                .sheet-half-content.single-item {
-                    justify-content: center;
-                }
-                .sheet-half-content.two-items {
-                    justify-content: space-around;
-                }
-                .sheet-half-content.three-items {
-                    justify-content: space-around;
+                    flex-direction: row-reverse; /* 🌟 右から左へ並べる */
+                    justify-content: flex-start; /* 🌟 右端から順に詰めて並べる！（最終ページは左に余白が残る） */
+                    align-items: center;         /* 🌟 上下方向完全中央揃え！ */
+                    gap: ${columnGap};           /* 🌟 全ページで統一された列間隔！ */
                 }
 
                 /* 🌟 各句：縦書きで独立した1列 */
@@ -878,82 +865,47 @@ function executeKushuPrint() {
                     letter-spacing: 0.1em;
                 }
 
-                /* 表紙 */
-                .sheet-half-content.centered-content {
-                    align-items: center;
-                }
-                .cover-box {
-                    writing-mode: vertical-rl;
-                    -webkit-writing-mode: vertical-rl;
-                    display: inline-flex;
-                    flex-direction: row-reverse;
+                /* 表紙・扉 */
+                .sheet-half-content.cover-page-content {
                     justify-content: center;
                     align-items: center;
-                    gap: 12mm;
-                    height: fit-content;
                 }
-                .print-cover-title {
+                .print-cover-title, .print-tobira-title {
+                    writing-mode: vertical-rl;
+                    -webkit-writing-mode: vertical-rl;
                     font-size: 26pt;
                     font-weight: 600;
                     letter-spacing: 0.35em;
                     color: #111111;
                     white-space: nowrap;
                 }
-                .print-cover-author {
-                    font-size: 14pt;
-                    letter-spacing: 0.3em;
-                    color: #333333;
-                    white-space: nowrap;
-                    align-self: flex-end;
-                    margin-top: 15mm;
-                }
 
-                /* 扉 */
-                .tobira-box {
+                /* 裏表紙（奥付）：左端にうてな俳句会＋スタンプ */
+                .sheet-half-content.colophon-page-content {
+                    justify-content: flex-end; /* 🌟 ページの左端に配置！ */
+                    align-items: center;
+                }
+                .colophon-left-block {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
-                    display: inline-block;
-                    height: fit-content;
-                }
-                .print-tobira-title {
-                    font-size: 20pt;
-                    font-weight: 500;
-                    letter-spacing: 0.3em;
-                    color: #333333;
-                    white-space: nowrap;
-                }
-
-                /* 奥付 */
-                .print-colophon-box {
-                    writing-mode: vertical-rl;
-                    -webkit-writing-mode: vertical-rl;
-                    border: 0.8pt solid #555555;
-                    padding: 8mm 6mm;
                     display: inline-flex;
                     flex-direction: row-reverse;
-                    align-items: flex-start;
+                    align-items: center;
                     gap: 5mm;
-                    height: 105mm;
-                }
-                .print-colophon-title {
-                    font-size: 13pt;
-                    font-weight: 600;
-                    letter-spacing: 0.25em;
-                    white-space: nowrap;
-                }
-                .print-colophon-author {
-                    font-size: 10pt;
-                    letter-spacing: 0.2em;
-                    color: #333333;
-                    white-space: nowrap;
                 }
                 .print-colophon-brand {
-                    font-size: 8.5pt;
-                    letter-spacing: 0.2em;
-                    color: #555555;
-                    margin-top: 12mm;
+                    writing-mode: vertical-rl;
+                    -webkit-writing-mode: vertical-rl;
+                    font-size: 11.5pt;
+                    font-weight: 500;
+                    letter-spacing: 0.32em;
+                    color: #222222;
                     white-space: nowrap;
-                    align-self: flex-end;
+                }
+                .print-colophon-stamp {
+                    width: 14mm;
+                    height: 14mm;
+                    object-fit: contain;
                 }
             </style>
         </head>
