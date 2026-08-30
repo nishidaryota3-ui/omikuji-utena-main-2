@@ -729,7 +729,7 @@ function executeKushuPrint() {
             <title>${escapeHtml(bookletTitle)}</title>
             <style>
                 @page {
-                    size: A4 landscape;
+                    size: landscape;
                     margin: 0;
                 }
                 * {
@@ -768,7 +768,7 @@ function executeKushuPrint() {
                 .sheet-half {
                     width: 148.5mm;
                     height: 210mm;
-                    padding: 22mm 18mm 18mm;
+                    padding: 22mm 18mm 16mm;
                     display: flex;
                     flex-direction: column;
                     justify-content: space-between;
@@ -778,36 +778,24 @@ function executeKushuPrint() {
                 .sheet-half-content {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
-                    display: flex;
-                    flex-direction: row;
-                    justify-content: space-evenly;
-                    align-items: flex-start;
-                    height: 160mm;
+                    height: 155mm;
                     width: 100%;
-                }
-                /* 5句＋年月などの高密度レイアウト対応 */
-                .sheet-half.dense-layout .sheet-half-content {
-                    justify-content: space-between;
-                }
-                .sheet-half.dense-layout .print-phrase-line {
-                    font-size: 11pt;
-                    letter-spacing: 0.22em;
-                    line-height: 1.5;
-                }
-                .sheet-half.dense-layout .print-issue-header {
-                    font-size: 10pt;
-                    padding-right: 2.5mm;
-                    margin-left: 3mm;
+                    padding: 0 4mm;
+                    text-align: start;
                 }
 
                 .print-phrase-line {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
+                    display: inline-block;
+                    vertical-align: top;
                     font-size: 12.5pt;
-                    letter-spacing: 0.26em;
-                    line-height: 1.6;
+                    letter-spacing: 0.28em;
+                    line-height: 1.5;
                     color: #1a1a1a;
                     white-space: nowrap;
+                    margin-left: 11mm;
+                    height: 145mm;
                 }
                 .print-phrase-line ruby {
                     ruby-position: over;
@@ -822,14 +810,30 @@ function executeKushuPrint() {
                 .print-issue-header {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
+                    display: inline-block;
+                    vertical-align: top;
                     font-size: 11pt;
                     font-weight: 600;
                     letter-spacing: 0.28em;
                     color: #2b2b2b;
                     border-right: 1.5pt solid #333333;
                     padding-right: 3.5mm;
-                    margin-left: 4mm;
+                    margin-left: 7mm;
+                    margin-right: 0mm;
+                    height: 145mm;
                     white-space: nowrap;
+                }
+
+                /* 5句＋年月などの高密度レイアウト対応（5句が綺麗に5列収まる） */
+                .sheet-half.dense-layout .print-phrase-line {
+                    font-size: 11pt;
+                    letter-spacing: 0.22em;
+                    margin-left: 6.0mm;
+                }
+                .sheet-half.dense-layout .print-issue-header {
+                    font-size: 10.5pt;
+                    padding-right: 2.5mm;
+                    margin-left: 5.0mm;
                 }
 
                 .print-nombre {
@@ -846,21 +850,28 @@ function executeKushuPrint() {
                     justify-content: center;
                 }
                 .cover-content {
-                    align-items: center;
-                    justify-content: center;
-                    gap: 12mm;
+                    writing-mode: vertical-rl;
+                    -webkit-writing-mode: vertical-rl;
+                    display: inline-block;
+                    text-align: center;
+                    height: 155mm;
+                    width: 100%;
+                    padding-top: 15mm;
                 }
                 .print-cover-title {
+                    display: inline-block;
                     font-size: 26pt;
                     font-weight: 600;
                     letter-spacing: 0.35em;
                     color: #1a1a1a;
+                    margin-left: 12mm;
                 }
                 .print-cover-author {
+                    display: inline-block;
                     font-size: 14pt;
                     letter-spacing: 0.3em;
                     color: #444444;
-                    margin-top: 8mm;
+                    margin-top: 15mm;
                 }
 
                 /* 扉 */
@@ -868,8 +879,13 @@ function executeKushuPrint() {
                     justify-content: center;
                 }
                 .tobira-content {
-                    align-items: center;
-                    justify-content: center;
+                    writing-mode: vertical-rl;
+                    -webkit-writing-mode: vertical-rl;
+                    display: inline-block;
+                    text-align: center;
+                    height: 155mm;
+                    width: 100%;
+                    padding-top: 25mm;
                 }
                 .print-tobira-title {
                     font-size: 20pt;
@@ -883,33 +899,40 @@ function executeKushuPrint() {
                     justify-content: center;
                 }
                 .colophon-content {
-                    align-items: center;
-                    justify-content: center;
+                    writing-mode: vertical-rl;
+                    -webkit-writing-mode: vertical-rl;
+                    display: inline-block;
+                    height: 155mm;
+                    width: 100%;
+                    padding-top: 20mm;
+                    padding-right: 15mm;
                 }
                 .print-colophon-box {
                     border: 0.8pt solid #666666;
-                    padding: 10mm 8mm;
-                    display: flex;
-                    flex-direction: row;
-                    align-items: center;
-                    gap: 6mm;
-                    min-height: 90mm;
+                    padding: 8mm 8mm;
+                    display: inline-block;
+                    height: 110mm;
                 }
                 .print-colophon-title {
+                    display: inline-block;
                     font-size: 13pt;
                     font-weight: 600;
                     letter-spacing: 0.25em;
+                    margin-left: 5mm;
                 }
                 .print-colophon-author {
+                    display: inline-block;
                     font-size: 10pt;
                     letter-spacing: 0.2em;
                     color: #333333;
+                    margin-left: 4mm;
                 }
                 .print-colophon-brand {
+                    display: inline-block;
                     font-size: 8.5pt;
                     letter-spacing: 0.2em;
                     color: #666666;
-                    margin-top: 4mm;
+                    margin-top: 12mm;
                 }
             </style>
         </head>
