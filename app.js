@@ -1021,7 +1021,93 @@ function getGojuonRowChar(kana) {
     if ('あいうえおぁぃぅぇぉ'.includes(c)) return 'あ';
     if ('かきくけこがぎぐげご'.includes(c)) return 'か';
     if ('さしすせそざじずぜぞ'.includes(c)) return 'さ';
-      const renderItem = (pData, timingText, catText) => {
+    if ('たちつてとだぢづでどっ'.includes(c)) return 'た';
+    if ('なにぬねの'.includes(c)) return 'な';
+    if ('はひふへほばびぶべぼぱぴぷぺぽ'.includes(c)) return 'は';
+    if ('まみむめも'.includes(c)) return 'ま';
+    if ('やゆよゃゅょ'.includes(c)) return 'や';
+    if ('らりるれろ'.includes(c)) return 'ら';
+    if ('わをん'.includes(c)) return 'わ';
+    return 'あ';
+}
+
+function toKanjiNum(numStr) {
+    const kanjiDigits = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+    const n = parseInt(numStr, 10);
+    if (isNaN(n)) return numStr;
+    if (n <= 10) return ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'][n];
+    if (n < 20) return '十' + kanjiDigits[n % 10];
+    return String(numStr).split('').map(d => kanjiDigits[parseInt(d, 10)] || d).join('');
+}
+
+// 🌸 季寄せ季語一覧の描画（右から左へ並ぶ縦書きリスト ＋ 句数バッジ ＋ 五十音/時候順切り替え）
+function renderSaijikiKigoList() {
+    const container = document.getElementById('saijikiKigoList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const query = document.getElementById('saijikiSearchInput') ? document.getElementById('saijikiSearchInput').value.trim().toLowerCase() : '';
+
+    // 1. 作品データベースから季語ごとの句数を集計
+    const kigoWorkMap = new Map();
+    haikuDatabase.forEach(h => {
+        const p = h.parentKigo || h.kigo;
+        if (p) {
+            if (!kigoWorkMap.has(p)) kigoWorkMap.set(p, []);
+            kigoWorkMap.get(p).push(h);
+        }
+    });
+
+    // 2. 季語辞書から該当する季節の親季語を抽出
+    const parentMap = new Map();
+    Object.keys(saijikiDict).forEach(k => {
+        const item = saijikiDict[k];
+        const s = (item.season || '').toLowerCase();
+        const isSeasonMatch = (query !== '') ? true : (s === currentSaijikiSeason);
+
+        if (isSeasonMatch) {
+            const p = item.parentKigo || k;
+            if (p && !parentMap.has(p)) {
+                parentMap.set(p, {
+                    parentKigo: p,
+                    parentKana: item.kigoKana || item.parentKana || '',
+                    season: item.season || '',
+                    detailSeason: item.detailSeason || '',
+                    category: item.category || '生活',
+                    desc: item.desc || '',
+                    children: new Set()
+                });
+            }
+            if (p && parentMap.has(p) && item.childKigos) {
+                item.childKigos.split(/[、,]/).forEach(c => {
+                    const ct = c.trim();
+                    if (ct) parentMap.get(p).children.add(ct);
+                });
+            }
+        }
+    });
+
+    // 3. 検索クエリによるフィルタリング
+    let parents = Array.from(parentMap.values());
+    if (query !== '') {
+        parents = parents.filter(p => {
+            if (p.parentKigo.toLowerCase().includes(query)) return true;
+            if (p.parentKana.toLowerCase().includes(query)) return true;
+            for (const child of p.children) {
+                if (child.toLowerCase().includes(query)) return true;
+            }
+            return false;
+        });
+    }
+
+    if (parents.length === 0) {
+        container.innerHTML = '<div style="writing-mode: vertical-rl; -webkit-writing-mode: vertical-rl; color: #888; font-size: 0.95rem; margin: auto; letter-spacing: 0.2em;">該当する季語がありません</div>';
+        return;
+    }
+
+    const sortKana = (arr) => [...arr].sort((a, b) => (a.parentKana || a.parentKigo).localeCompare(b.parentKana || b.parentKigo, 'ja'));
+
+    const renderItem = (pData, timingText, catText) => {
         const works = kigoWorkMap.get(pData.parentKigo) || [];
         const workCount = works.length;
         const rowChar = getGojuonRowChar(pData.parentKana || pData.parentKigo);
