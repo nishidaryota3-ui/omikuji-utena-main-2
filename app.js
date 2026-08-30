@@ -794,31 +794,32 @@ function executeKushuPrint() {
                     width: 100%;
                     height: 165mm;
                 }
-                /* 🌟 縦書きブロック（Flexboxを排除し、純粋なvertical-rlで右から左へ並べる） */
+                /* 🌟 縦書きブロック（純粋なvertical-rlで右から左へ並べる） */
                 .haiku-columns-group {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
                     display: block;
-                    height: fit-content;
+                    height: 155mm;
                     max-height: 155mm;
                     width: fit-content;
                     text-align: start;
                 }
 
-                /* 🌟 全ページ・全句で文字サイズを一定（12pt）に統一し、インラインブロックで横に並べる */
+                /* 🌟 各句は display: block にすることで、必ず独立した1列（新しい行）になり、絶対に縦に2句積まれない！ */
                 .print-phrase-line {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
-                    display: inline-block;
-                    vertical-align: top;
+                    display: block;
                     font-size: 12pt;
                     letter-spacing: 0.28em;
                     line-height: 1.0;
                     color: #111111;
                     white-space: nowrap;
                     height: fit-content;
-                    margin-left: ${linesPerPage >= 5 ? '7.5mm' : (linesPerPage === 4 ? '9.0mm' : (linesPerPage === 3 ? '12.0mm' : (linesPerPage === 2 ? '16.0mm' : '0mm')))};
+                    margin-left: ${linesPerPage >= 5 ? '8.0mm' : (linesPerPage === 4 ? '10.0mm' : (linesPerPage === 3 ? '13.0mm' : (linesPerPage === 2 ? '17.0mm' : '0mm')))};
                     margin-right: 0;
+                    margin-top: 0;
+                    margin-bottom: 0;
                     padding: 0;
                 }
                 .print-phrase-line:last-child {
@@ -834,20 +835,21 @@ function executeKushuPrint() {
                     letter-spacing: 0.05em;
                 }
 
-                /* 🌟 年月の右側の線は文字と同じ長さ（height: fit-content） */
+                /* 🌟 年月見出しも display: block で独立した1列に配置（線の長さは文字と同じ） */
                 .print-issue-header {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
-                    display: inline-block;
-                    vertical-align: top;
+                    display: block;
                     font-size: 10.5pt;
                     font-weight: 600;
                     letter-spacing: 0.28em;
                     color: #222222;
                     border-right: 1.2pt solid #222222;
                     padding-right: 2.8mm;
-                    margin-left: ${linesPerPage >= 5 ? '5.5mm' : '8.0mm'};
+                    margin-left: ${linesPerPage >= 5 ? '6.0mm' : '8.5mm'};
                     margin-right: 0;
+                    margin-top: 0;
+                    margin-bottom: 0;
                     white-space: nowrap;
                     height: fit-content;
                 }
