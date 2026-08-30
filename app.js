@@ -26,62 +26,76 @@ let touchStartY = 0;
 // 🚀 初期ロード処理（高速キャッシュ＆オフライン対応）
 window.onload = async function() {
     initSwipeEvents();
+    renderPage('topPage');
     await loadAppData();
 };
 
 /**
  * データ読み込み処理
- * 1. localStorage キャッシュがあれば即座に初期化（0秒起動）
- * 2. fetch で最新の saijiki.json と haiku.json を並列取得して更新
+ * 1. window.__UTENA_...（バンドルデータ）があれば即座に初期化（0秒・CORS無制限）
+ * 2. localStorage キャッシュがあれば初期化
+ * 3. fetch で最新の saijiki.json と haiku.json を並列取得して更新
  */
 async function loadAppData() {
-    let hasCachedData = false;
+    let hasData = false;
 
-    // ① ローカルキャッシュのチェックと即時展開
-    try {
-        const cachedSaijiki = localStorage.getItem('utena_saijiki_data');
-        const cachedHaiku = localStorage.getItem('utena_haiku_data');
-        if (cachedSaijiki && cachedHaiku) {
-            saijikiDict = JSON.parse(cachedSaijiki);
-            haikuDatabase = JSON.parse(cachedHaiku);
-            if (haikuDatabase.length > 0) {
-                hasCachedData = true;
-                hideLoadingOverlay();
-            }
+    // ① バンドルスクリプトデータのチェック（ローカル環境でも100%確実に即時起動）
+    if (window.__UTENA_SAIJIKI_DATA__ && window.__UTENA_HAIKU_DATA__) {
+        saijikiDict = window.__UTENA_SAIJIKI_DATA__;
+        haikuDatabase = window.__UTENA_HAIKU_DATA__;
+        if (haikuDatabase.length > 0) {
+            hasData = true;
+            hideLoadingOverlay();
         }
-    } catch (e) {
-        console.warn('キャッシュ読み込み失敗:', e);
     }
 
-    // ② 最新 JSON データのフェッチ（並列取得）
+    // ② ローカルキャッシュのチェック
+    if (!hasData) {
+        try {
+            const cachedSaijiki = localStorage.getItem('utena_saijiki_data');
+            const cachedHaiku = localStorage.getItem('utena_haiku_data');
+            if (cachedSaijiki && cachedHaiku) {
+                saijikiDict = JSON.parse(cachedSaijiki);
+                haikuDatabase = JSON.parse(cachedHaiku);
+                if (haikuDatabase.length > 0) {
+                    hasData = true;
+                    hideLoadingOverlay();
+                }
+            }
+        } catch (e) {
+            console.warn('キャッシュ読み込み失敗:', e);
+        }
+    }
+
+    // ③ 最新 JSON データのフェッチ（Webサーバー経由時の更新）
     try {
         const [resSaijiki, resHaiku] = await Promise.all([
             fetch('./saijiki.json', { cache: 'no-cache' }),
             fetch('./haiku.json', { cache: 'no-cache' })
         ]);
 
-        if (!resSaijiki.ok || !resHaiku.ok) {
-            throw new Error(`データ取得エラー: saijiki=${resSaijiki.status}, haiku=${resHaiku.status}`);
+        if (resSaijiki.ok && resHaiku.ok) {
+            const freshSaijiki = await resSaijiki.json();
+            const freshHaiku = await resHaiku.json();
+
+            saijikiDict = freshSaijiki;
+            haikuDatabase = freshHaiku;
+
+            try {
+                localStorage.setItem('utena_saijiki_data', JSON.stringify(freshSaijiki));
+                localStorage.setItem('utena_haiku_data', JSON.stringify(freshHaiku));
+            } catch (storageErr) {
+                console.warn('localStorage 保存容量オーバー等の警告:', storageErr);
+            }
+            hasData = true;
+            hideLoadingOverlay();
         }
-
-        const freshSaijiki = await resSaijiki.json();
-        const freshHaiku = await resHaiku.json();
-
-        saijikiDict = freshSaijiki;
-        haikuDatabase = freshHaiku;
-
-        // キャッシュの更新
-        try {
-            localStorage.setItem('utena_saijiki_data', JSON.stringify(freshSaijiki));
-            localStorage.setItem('utena_haiku_data', JSON.stringify(freshHaiku));
-        } catch (storageErr) {
-            console.warn('localStorage 保存容量オーバー等の警告:', storageErr);
-        }
-
-        hideLoadingOverlay();
     } catch (err) {
-        console.error('最新データ取得エラー:', err);
-        if (!hasCachedData) {
+        // fetchが失敗してもバンドルデータがあれば問題なし
+        if (hasData) {
+            hideLoadingOverlay();
+        } else {
+            console.error('最新データ取得エラー:', err);
             showLoadingError();
         }
     }
