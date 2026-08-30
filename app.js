@@ -880,7 +880,7 @@ function executeKushuPrint() {
                     white-space: nowrap;
                 }
 
-                /* 裏表紙（奥付）：左端にうてな俳句会＋スタンプ */
+                /* 裏表紙（奥付）：左端にうてな俳句会＋文字の真下にスタンプ */
                 .sheet-half-content.colophon-page-content {
                     justify-content: flex-end; /* 🌟 ページの左端に配置！ */
                     align-items: center;
@@ -888,10 +888,8 @@ function executeKushuPrint() {
                 .colophon-left-block {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
-                    display: inline-flex;
-                    flex-direction: row-reverse;
-                    align-items: center;
-                    gap: 5mm;
+                    display: block;
+                    height: fit-content;
                 }
                 .print-colophon-brand {
                     writing-mode: vertical-rl;
@@ -901,11 +899,14 @@ function executeKushuPrint() {
                     letter-spacing: 0.32em;
                     color: #222222;
                     white-space: nowrap;
+                    display: block;
                 }
                 .print-colophon-stamp {
+                    display: block;
                     width: 14mm;
                     height: 14mm;
                     object-fit: contain;
+                    margin-top: 6mm; /* 🌟 「うてな俳句会」の文字の真下に配置！ */
                 }
             </style>
         </head>
