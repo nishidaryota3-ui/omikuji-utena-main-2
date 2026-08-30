@@ -802,8 +802,8 @@ function executeKushuPrint() {
                     left: 16mm;
                     right: 16mm;
                     display: flex;
-                    flex-direction: row;
-                    justify-content: space-between; /* 🌟 左右均等割り付け！（ページ全体に均等に広がる） */
+                    flex-direction: row-reverse; /* 🌟 右から左へ並べる！（日本語の正しい縦書き順） */
+                    justify-content: space-between; /* 🌟 左右均等割り付け！（右端から左端まで均等に広がる） */
                     align-items: center;            /* 🌟 上下方向完全中央揃え！ */
                 }
                 .sheet-half-content.single-item {
@@ -877,7 +877,7 @@ function executeKushuPrint() {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
                     display: inline-flex;
-                    flex-direction: row;
+                    flex-direction: row-reverse;
                     justify-content: center;
                     align-items: center;
                     gap: 12mm;
@@ -921,7 +921,7 @@ function executeKushuPrint() {
                     border: 0.8pt solid #555555;
                     padding: 8mm 6mm;
                     display: inline-flex;
-                    flex-direction: row;
+                    flex-direction: row-reverse;
                     align-items: flex-start;
                     gap: 5mm;
                     height: 105mm;
