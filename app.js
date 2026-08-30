@@ -785,7 +785,7 @@ function executeKushuPrint() {
                     align-items: center;
                     position: relative;
                 }
-                /* 🌟 上下左右完全中央寄せコンテナ */
+                /* 🌟 上下左右完全中央寄せコンテナ（横書きFlexboxで中の縦書きブロックを中央配置） */
                 .sheet-half-content {
                     flex: 1;
                     display: flex;
@@ -794,30 +794,35 @@ function executeKushuPrint() {
                     width: 100%;
                     height: 165mm;
                 }
+                /* 🌟 縦書きブロック（Flexboxを排除し、純粋なvertical-rlで右から左へ並べる） */
                 .haiku-columns-group {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
-                    display: inline-flex;
-                    flex-direction: row;
-                    justify-content: center;
-                    align-items: center;
-                    gap: 7.5mm;
+                    display: block;
+                    height: fit-content;
                     max-height: 155mm;
+                    width: fit-content;
+                    text-align: start;
                 }
 
-                /* 🌟 全ページ・全句で文字サイズを一定（12pt）に統一 */
+                /* 🌟 全ページ・全句で文字サイズを一定（12pt）に統一し、インラインブロックで横に並べる */
                 .print-phrase-line {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
                     display: inline-block;
+                    vertical-align: top;
                     font-size: 12pt;
                     letter-spacing: 0.28em;
                     line-height: 1.0;
                     color: #111111;
                     white-space: nowrap;
                     height: fit-content;
-                    margin: 0;
+                    margin-left: ${linesPerPage >= 5 ? '7.5mm' : (linesPerPage === 4 ? '9.0mm' : (linesPerPage === 3 ? '12.0mm' : (linesPerPage === 2 ? '16.0mm' : '0mm')))};
+                    margin-right: 0;
                     padding: 0;
+                }
+                .print-phrase-line:last-child {
+                    margin-left: 0;
                 }
                 .print-phrase-line ruby {
                     ruby-position: over;
@@ -834,16 +839,17 @@ function executeKushuPrint() {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
                     display: inline-block;
+                    vertical-align: top;
                     font-size: 10.5pt;
                     font-weight: 600;
                     letter-spacing: 0.28em;
                     color: #222222;
                     border-right: 1.2pt solid #222222;
                     padding-right: 2.8mm;
-                    margin-left: 2.8mm;
+                    margin-left: ${linesPerPage >= 5 ? '5.5mm' : '8.0mm'};
+                    margin-right: 0;
                     white-space: nowrap;
                     height: fit-content;
-                    align-self: center;
                 }
 
                 .print-nombre {
