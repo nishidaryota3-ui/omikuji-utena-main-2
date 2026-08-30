@@ -350,11 +350,19 @@ function renderPage(pageId) {
     const target = document.getElementById(pageId);
     if (target) target.style.display = 'flex';
     
+    const infoTrigger = document.getElementById('infoTrigger');
+    const mainTag = document.getElementById('roomMainTag');
+
     if (pageId !== 'roomPage') {
-        const infoTrigger = document.getElementById('infoTrigger');
-        const mainTag = document.getElementById('roomMainTag');
-        if (infoTrigger) infoTrigger.style.display = 'none';
+        if (infoTrigger) {
+            infoTrigger.style.display = 'none';
+            infoTrigger.onclick = revealHiddenInfo; // 🌟 本来の動作に確実にリセット
+        }
         if (mainTag) mainTag.innerText = '';
+    } else {
+        if (infoTrigger) {
+            infoTrigger.onclick = revealHiddenInfo; // 🌟 一句部屋では必ずrevealHiddenInfoに設定
+        }
     }
     
     navState.currentLayer = pageId;
