@@ -139,6 +139,8 @@ body.font-gothic {
 }
 
 /* 🔠 大文字モードの共通調整 */
+body.font-large .vertical-link { font-size: clamp(1.35rem, 4.8vw, 1.75rem); }
+body.font-large .main-headline { font-size: clamp(1.85rem, 6.2vw, 2.45rem); }
 body.font-large .kushu-author-name { font-size: clamp(1.4rem, 4.8vw, 1.8rem); }
 body.font-large .kushu-phrase { font-size: 1.6rem; }
 body.font-large .saijiki-kigo-text { font-size: min(3.3vh, 28px); }
