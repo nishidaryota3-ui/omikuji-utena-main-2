@@ -42,11 +42,110 @@ function toKanjiNum(numStr) {
     return String(numStr).split('').map(d => kanjiDigits[parseInt(d, 10)] || d).join('');
 }
 
+// 🌸 ユーザー環境設定
+const appSettings = {
+    fontSize: localStorage.getItem('utena_setting_fontsize') || 'standard', // 'standard' | 'large'
+    fontFamily: localStorage.getItem('utena_setting_fontfamily') || 'mincho', // 'mincho' | 'gothic'
+    catVisible: localStorage.getItem('utena_setting_cat') !== 'false', // true | false (default true)
+    autoOmikuji: localStorage.getItem('utena_setting_auto_omikuji') === 'true' // true | false (default false)
+};
+
+function applyAllSettings() {
+    // 1. フォント切り替え
+    document.body.classList.toggle('font-gothic', appSettings.fontFamily === 'gothic');
+    const fontMinchoBtn = document.getElementById('setFontFamilyMinchoBtn');
+    const fontGothicBtn = document.getElementById('setFontFamilyGothicBtn');
+    if (fontMinchoBtn && fontGothicBtn) {
+        fontMinchoBtn.classList.toggle('active', appSettings.fontFamily !== 'gothic');
+        fontGothicBtn.classList.toggle('active', appSettings.fontFamily === 'gothic');
+    }
+
+    // 2. 文字サイズ切り替え
+    document.body.classList.toggle('font-large', appSettings.fontSize === 'large');
+    const sizeStdBtn = document.getElementById('setFontSizeStandardBtn');
+    const sizeLargeBtn = document.getElementById('setFontSizeLargeBtn');
+    if (sizeStdBtn && sizeLargeBtn) {
+        sizeStdBtn.classList.toggle('active', appSettings.fontSize !== 'large');
+        sizeLargeBtn.classList.toggle('active', appSettings.fontSize === 'large');
+    }
+
+    // 3. おみ句じ猫 ON/OFF
+    const catOnBtn = document.getElementById('setCatOnBtn');
+    const catOffBtn = document.getElementById('setCatOffBtn');
+    if (catOnBtn && catOffBtn) {
+        catOnBtn.classList.toggle('active', appSettings.catVisible);
+        catOffBtn.classList.toggle('active', !appSettings.catVisible);
+    }
+    const catBtn = document.getElementById('fixedCatBtn');
+    if (catBtn) {
+        if (!appSettings.catVisible) {
+            catBtn.classList.add('hidden');
+        } else if (navState.category === 'saijiki' || navState.category === 'kushu' || (navState.category === 'utena_archive' && !isRoomOpen)) {
+            catBtn.classList.remove('hidden');
+        }
+    }
+
+    // 4. 起動時おみ句じ ON/OFF
+    const autoOnBtn = document.getElementById('setAutoOmikujiOnBtn');
+    const autoOffBtn = document.getElementById('setAutoOmikujiOffBtn');
+    if (autoOnBtn && autoOffBtn) {
+        autoOnBtn.classList.toggle('active', appSettings.autoOmikuji);
+        autoOffBtn.classList.toggle('active', !appSettings.autoOmikuji);
+    }
+
+    // 鑑賞画面が開いていれば再描画
+    if (isRoomOpen) {
+        updateHaikuDisplay();
+    }
+}
+
+function setAppFontSize(size) {
+    appSettings.fontSize = size;
+    localStorage.setItem('utena_setting_fontsize', size);
+    applyAllSettings();
+}
+
+function setAppFontFamily(family) {
+    appSettings.fontFamily = family;
+    localStorage.setItem('utena_setting_fontfamily', family);
+    applyAllSettings();
+}
+
+function setAppCatVisible(visible) {
+    appSettings.catVisible = visible;
+    localStorage.setItem('utena_setting_cat', visible ? 'true' : 'false');
+    applyAllSettings();
+}
+
+function setAppAutoOmikuji(auto) {
+    appSettings.autoOmikuji = auto;
+    localStorage.setItem('utena_setting_auto_omikuji', auto ? 'true' : 'false');
+    applyAllSettings();
+}
+
+function openSettingsModal() {
+    applyAllSettings();
+    const modal = document.getElementById('settingsModal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeSettingsModal(event) {
+    if (event) event.stopPropagation();
+    const modal = document.getElementById('settingsModal');
+    if (modal) modal.classList.add('hidden');
+}
+
 // 🚀 初期ロード処理（高速キャッシュ＆オフライン対応）
 window.onload = async function() {
     initSwipeEvents();
+    applyAllSettings();
     renderPage('topPage');
     await loadAppData();
+
+    // 起動時おみ句じがONの場合は自動でおみ句じを開始
+    if (appSettings.autoOmikuji) {
+        launchOmikuji();
+    }
 };
 
 /**
@@ -275,7 +374,9 @@ function renderPage(pageId) {
 
     const catBtn = document.getElementById('fixedCatBtn');
     if (catBtn) {
-        if (navState.category === 'saijiki' || navState.category === 'kushu' || (navState.category === 'utena_archive' && !isRoomOpen)) {
+        if (!appSettings.catVisible) {
+            catBtn.classList.add('hidden');
+        } else if (navState.category === 'saijiki' || navState.category === 'kushu' || (navState.category === 'utena_archive' && !isRoomOpen)) {
             catBtn.classList.remove('hidden');
         } else {
             catBtn.classList.add('hidden');
@@ -1645,7 +1746,31 @@ function updateHaikuDisplay() {
     if (!currentHaiku) return;
 
     const phraseEl = document.getElementById('haikuPhrase');
-    if (phraseEl) phraseEl.innerHTML = formatRubyText(currentHaiku.phrase);
+    if (phraseEl) {
+        phraseEl.innerHTML = formatRubyText(currentHaiku.phrase);
+
+        // 🌟 文字数に応じた動的文字サイズ調整（最大20文字でも画面上下で絶対に折り返さず一列表示）
+        const plainText = (currentHaiku.phrase || '')
+            .replace(/\[[^\]]*?\]/g, '')
+            .replace(/[（(][^）)]*?[）)]/g, '')
+            .replace(/<rt>.*?<\/rt>/g, '')
+            .replace(/<[^>]+>/g, '')
+            .replace(/[\s　]/g, '');
+        const charCount = plainText.length || 17;
+
+        const isLarge = (appSettings.fontSize === 'large');
+        if (charCount > 17) {
+            // 17文字超（最大20文字超）の場合は縦幅に合わせて文字サイズと文字間隔を自動最適化
+            const maxVh = isLarge ? 64 : 60;
+            const dynamicVh = Math.min(isLarge ? 3.4 : 2.9, (maxVh / (charCount * 1.16)));
+            phraseEl.style.fontSize = `min(${dynamicVh.toFixed(2)}vh, ${isLarge ? 28 : 24}px)`;
+            phraseEl.style.letterSpacing = isLarge ? '0.12em' : '0.15em';
+        } else {
+            // 通常（17文字以内）はCSSのデフォルトクラスを適用
+            phraseEl.style.fontSize = '';
+            phraseEl.style.letterSpacing = '';
+        }
+    }
 
     let kigoString = (currentHaiku.season === 'muki') ? '無季' : (currentHaiku.parentKigo || currentHaiku.kigo);
     if (currentHaiku.detailSeason) {

@@ -59,8 +59,60 @@
         </div>
     </div>
 
+    <!-- ⚙️ 環境設定モーダル（文字サイズ・フォント・猫・起動時おみ句じ） -->
+    <div id="settingsModal" class="card-overlay hidden" onclick="closeSettingsModal(event)">
+        <div class="settings-modal-box" onclick="event.stopPropagation()">
+            <span class="card-close-btn" onclick="closeSettingsModal(event)">✕</span>
+            <div class="settings-modal-title">環境設定</div>
+
+            <!-- 1. 文字の大きさ -->
+            <div class="settings-row">
+                <span class="settings-label">文字の大きさ</span>
+                <div class="settings-switch-group">
+                    <button type="button" id="setFontSizeStandardBtn" class="settings-opt-btn active" onclick="setAppFontSize('standard')">標準</button>
+                    <button type="button" id="setFontSizeLargeBtn" class="settings-opt-btn" onclick="setAppFontSize('large')">大文字</button>
+                </div>
+            </div>
+
+            <!-- 2. フォント -->
+            <div class="settings-row">
+                <span class="settings-label">フォント</span>
+                <div class="settings-switch-group">
+                    <button type="button" id="setFontFamilyMinchoBtn" class="settings-opt-btn active" onclick="setAppFontFamily('mincho')">明朝</button>
+                    <button type="button" id="setFontFamilyGothicBtn" class="settings-opt-btn" onclick="setAppFontFamily('gothic')">ゴシック</button>
+                </div>
+            </div>
+
+            <!-- 3. おみ句じ猫 -->
+            <div class="settings-row">
+                <span class="settings-label">おみ句じ猫</span>
+                <div class="settings-switch-group">
+                    <button type="button" id="setCatOnBtn" class="settings-opt-btn active" onclick="setAppCatVisible(true)">ON</button>
+                    <button type="button" id="setCatOffBtn" class="settings-opt-btn" onclick="setAppCatVisible(false)">OFF</button>
+                </div>
+            </div>
+
+            <!-- 4. アプリ起動時におみ句じを起動 -->
+            <div class="settings-row">
+                <span class="settings-label">起動時おみ句じ</span>
+                <div class="settings-switch-group">
+                    <button type="button" id="setAutoOmikujiOnBtn" class="settings-opt-btn" onclick="setAppAutoOmikuji(true)">ON</button>
+                    <button type="button" id="setAutoOmikujiOffBtn" class="settings-opt-btn active" onclick="setAppAutoOmikuji(false)">OFF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 🏡 トップメニュー（うてな俳句 / 季寄せ / 句集 / おみ句じ） -->
     <div id="topPage" class="layer-page">
+        <!-- ⚙️ トップページ 右上の設定アイコン -->
+        <button type="button" class="top-settings-trigger" onclick="openSettingsModal()" title="設定">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+        </button>
+
         <!-- 💮 トップページ 左隅の落款スタンプ -->
         <img src="stamp_utena.png?v=2" alt="うてな" class="top-page-stamp">
 
