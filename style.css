@@ -23,11 +23,18 @@ body, html {
 /* 🏡 トップメニュー（うてな俳句 / 季寄せ / 句集 / おみ句じ） */
 #topPage { 
     display: flex; 
-    gap: clamp(1.8rem, 6vw, 4.5rem); 
     flex-direction: row; 
     justify-content: center; 
     align-items: center; 
-    max-width: 95vw;
+    gap: clamp(2.0rem, 7vw, 5.0rem); 
+    width: 100vw; 
+    height: 100vh;
+    padding: 0 !important;
+    margin: 0 !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    box-sizing: border-box;
 } 
 
 .menu-block { 
@@ -36,6 +43,7 @@ body, html {
     align-items: center; 
     justify-content: center;
     height: clamp(260px, 45vh, 360px); 
+    flex-shrink: 0;
 }
 .main-headline { 
     font-size: clamp(1.6rem, 5.5vw, 2.1rem); 
