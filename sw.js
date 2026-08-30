@@ -1,9 +1,13 @@
-const CACHE_NAME = 'utena-haiku-v3';
+const CACHE_NAME = 'utena-haiku-v4';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './data_bundle.js',
+  './js/utils.js',
+  './js/settings.js',
+  './js/print_engine.js',
+  './js/saijiki.js',
   './app.js',
   './manifest.json',
   './icon.png',
