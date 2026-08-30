@@ -59,44 +59,54 @@
         </div>
     </div>
 
-    <!-- 🏡 トップメニュー -->
+    <!-- 🏡 トップメニュー（うてな俳句 / 季寄せ / 句集 / おみ句じ） -->
     <div id="topPage" class="layer-page">
-        <!-- おみ句じ ブロック -->
+        <!-- おみ句じ（直接いっしょくた起動） -->
         <div class="menu-block">
-            <div class="sub-menu-group">
-                <div class="vertical-link sub-link" onclick="openRoom('detarame', 'all', 'いっしょくた')">いっしょくた</div>
-                <div class="vertical-link sub-link" onclick="renderPage('haijinPage')">俳人</div>
-                <div class="vertical-link sub-link" onclick="renderPage('haikuPage')">季節</div>
-            </div>
-            <div class="vertical-link main-headline" style="cursor: default;">おみ句じ</div>
+            <div class="vertical-link main-headline" onclick="launchOmikuji()">おみ句じ</div>
+        </div>
+
+        <!-- 句集（俳人別アーカイブ） -->
+        <div class="menu-block">
+            <div class="vertical-link main-headline" onclick="showKushuAuthorList()">句集</div>
         </div>
         
-        <!-- 季寄せ ブロック -->
+        <!-- 季寄せ（風月スタイル大画面） -->
         <div class="menu-block">
             <div class="vertical-link main-headline" onclick="renderPage('saijikiPage')">季寄せ</div>
         </div>
 
-        <!-- うてな俳句 ブロック -->
+        <!-- うてな俳句（号別アーカイブ） -->
         <div class="menu-block">
             <div class="vertical-link main-headline" onclick="showIssueYearList()">うてな俳句</div>
         </div>
     </div>
 
-    <!-- おみ句じ：俳人 ページ -->
-    <div id="haijinPage" class="layer-page">
-        <div id="haijinList" class="horizontal-scroll-container"></div>
+    <!-- 👥 句集：俳人一覧 ページ -->
+    <div id="kushuAuthorPage" class="layer-page">
+        <div id="kushuAuthorList" class="horizontal-scroll-container kushu-author-scroll-list"></div>
     </div>
 
-    <!-- おみ句じ：季節 ページ -->
-    <div id="haikuPage" class="layer-page">
-        <div class="fits-screen-container">
-            <div class="vertical-link" onclick="openRoom('haiku_season', 'haru', '春の句')">春</div>
-            <div class="vertical-link" onclick="openRoom('haiku_season', 'natsu', '夏の句')">夏</div>
-            <div class="vertical-link" onclick="openRoom('haiku_season', 'aki', '秋の句')">秋</div>
-            <div class="vertical-link" onclick="openRoom('haiku_season', 'huyu', '冬の句')">冬</div>
-            <div class="vertical-link" onclick="openRoom('haiku_season', 'shinnen', '新年の句')">新年</div>
-            <div class="vertical-link" onclick="openRoom('haiku_season', 'muki', '無季の句')">無季</div>
+    <!-- 📜 句集：俳人詳細・時系列スクロール ページ -->
+    <div id="kushuDetailPage" class="layer-page kushu-detail-layer">
+        <!-- 上部コントロールバー（モード切替 ＆ 年月表示ON/OFF） -->
+        <div class="kushu-control-bar">
+            <div class="kushu-mode-switch">
+                <span id="kmodeChrono" class="mode-tab active" onclick="switchKushuMode('chrono')">時系列</span>
+                <span class="mode-tab-divider">・</span>
+                <span id="kmodeOmikuji" class="mode-tab" onclick="switchKushuMode('omikuji')">おみ句じ</span>
+            </div>
+            <div class="kushu-toggle-group">
+                <label class="kushu-toggle-label">
+                    <span class="toggle-text">年月表示</span>
+                    <input type="checkbox" id="kushuIssueDividerToggle" checked onchange="toggleKushuIssueDividers()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
         </div>
+
+        <!-- 時系列スクロールリスト -->
+        <div id="kushuHaikuList" class="horizontal-scroll-container kushu-haiku-scroll-list"></div>
     </div>
 
     <!-- 🌸 季寄せ：大画面 ページ（風月スタイル） -->

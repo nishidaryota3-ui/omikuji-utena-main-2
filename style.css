@@ -20,19 +20,221 @@ body, html {
     flex-direction: column;
 }
 
-/* 🏡 トップメニュー */
+/* 🏡 トップメニュー（うてな俳句 / 季寄せ / 句集 / おみ句じ） */
 #topPage { 
-    display: flex; gap: clamp(1.5rem, 5vw, 3.5rem); flex-direction: row; 
-    justify-content: center; align-items: center; max-width: 95vw;
+    display: flex; 
+    gap: clamp(1.8rem, 6vw, 4.5rem); 
+    flex-direction: row; 
+    justify-content: center; 
+    align-items: center; 
+    max-width: 95vw;
 } 
 
-.menu-block { display: flex; flex-direction: row; align-items: flex-start; height: clamp(280px, 50vh, 380px); }
-.main-headline { font-size: clamp(1.5rem, 5vw, 1.9rem); font-weight: 500; color: #2b2b2b; writing-mode: vertical-rl; -webkit-writing-mode: vertical-rl; letter-spacing: 0.25em; }
-.sub-menu-group { display: flex; flex-direction: row; gap: clamp(1.0rem, 3.5vw, 2.2rem); margin-right: clamp(1.2rem, 3.5vw, 2.5rem); }
-.sub-link { font-size: clamp(1.1rem, 3.8vw, 1.35rem); font-weight: 500; color: #555555; letter-spacing: 0.2em; margin-top: clamp(2.5rem, 8vh, 4.0rem); }
-.sub-link:hover { color: #888888; }
+.menu-block { 
+    display: flex; 
+    flex-direction: row; 
+    align-items: center; 
+    justify-content: center;
+    height: clamp(260px, 45vh, 360px); 
+}
+.main-headline { 
+    font-size: clamp(1.6rem, 5.5vw, 2.1rem); 
+    font-weight: 500; 
+    color: #2b2b2b; 
+    writing-mode: vertical-rl; 
+    -webkit-writing-mode: vertical-rl; 
+    letter-spacing: 0.28em; 
+    cursor: pointer;
+    transition: color 0.2s, transform 0.2s;
+}
+.main-headline:hover { 
+    color: #7a7060; 
+    transform: translateY(-4px);
+}
 
-#haijinPage { display: none; }
+/* ========================================================
+   👥 句集：俳人一覧 ＆ 時系列アーカイブ
+   ======================================================== */
+.kushu-author-scroll-list {
+    gap: clamp(2.2rem, 5vw, 3.5rem) !important;
+    padding: 0 10vw !important;
+}
+
+.kushu-author-item {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    flex-shrink: 0;
+}
+.kushu-author-item:hover { opacity: 0.75; }
+.kushu-author-item:active { transform: scale(0.96); opacity: 0.6; }
+
+.kushu-author-name {
+    writing-mode: vertical-rl;
+    -webkit-writing-mode: vertical-rl;
+    font-size: clamp(1.2rem, 4vw, 1.55rem);
+    letter-spacing: 0.25em;
+    color: #2b2b2b;
+    white-space: nowrap;
+}
+.kushu-author-name ruby { ruby-position: over; -webkit-ruby-position: over; }
+.kushu-author-name rt { font-size: 0.45em; color: #888888; }
+
+.kushu-count-badge {
+    writing-mode: vertical-rl;
+    -webkit-writing-mode: vertical-rl;
+    font-size: 0.75rem;
+    color: #8c8476;
+    background: #f0ece6;
+    padding: 4px 2px;
+    border-radius: 4px;
+    font-family: serif;
+    letter-spacing: 0.1em;
+    min-height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 📜 句集：時系列スクロール画面 */
+.kushu-detail-layer {
+    padding-top: calc(55px + env(safe-area-inset-top)) !important;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+    justify-content: flex-start !important;
+}
+
+.kushu-control-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 90vw;
+    max-width: 600px;
+    margin: 4px auto 12px;
+    z-index: 30;
+}
+
+.kushu-mode-switch {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.82rem;
+    letter-spacing: 0.12em;
+}
+
+/* 年月表示 ON/OFF トグルスイッチ */
+.kushu-toggle-group {
+    display: flex;
+    align-items: center;
+}
+.kushu-toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    color: #7a7060;
+    user-select: none;
+    letter-spacing: 0.05em;
+}
+.kushu-toggle-label input {
+    display: none;
+}
+.toggle-slider {
+    position: relative;
+    width: 34px;
+    height: 18px;
+    background-color: #dedad4;
+    border-radius: 18px;
+    transition: background-color 0.2s;
+    display: inline-block;
+}
+.toggle-slider::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.kushu-toggle-label input:checked + .toggle-slider {
+    background-color: #2b2b2b;
+}
+.kushu-toggle-label input:checked + .toggle-slider::after {
+    transform: translateX(16px);
+}
+
+/* 句集 時系列スクロールリスト */
+.kushu-haiku-scroll-list {
+    width: 100vw !important;
+    max-width: 100% !important;
+    height: 60vh !important;
+    gap: clamp(2.5rem, 6vw, 4.0rem) !important;
+    padding: 0 10vw !important;
+    margin: 0 !important;
+}
+
+.kushu-haiku-card {
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 1.0rem;
+    align-items: center;
+    flex-shrink: 0;
+}
+.kushu-phrase {
+    writing-mode: vertical-rl;
+    -webkit-writing-mode: vertical-rl;
+    font-size: 1.35rem;
+    letter-spacing: 0.25em;
+    line-height: 1.4;
+    color: #2b2b2b;
+}
+.kushu-phrase ruby { ruby-position: over; -webkit-ruby-position: over; }
+.kushu-phrase rt { font-size: 0.45em; color: #666666; }
+
+.kushu-kigo-tag {
+    writing-mode: vertical-rl;
+    -webkit-writing-mode: vertical-rl;
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    color: #8c8476;
+    margin-top: 3.5rem;
+}
+
+/* 🌸 発行年月セパレーター（令和八年八月号 等） */
+.kushu-issue-divider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    writing-mode: vertical-rl;
+    -webkit-writing-mode: vertical-rl;
+    flex-shrink: 0;
+    align-self: flex-start;
+    margin-top: 15px;
+    margin-right: 1.5rem;
+    margin-left: 1.0rem;
+    padding: 8px 6px 16px;
+    border-right: 1.5px solid rgba(90, 84, 73, 0.35);
+    user-select: none;
+    transition: opacity 0.25s ease, width 0.25s ease;
+}
+.kushu-issue-divider.hidden {
+    display: none !important;
+}
+.kushu-issue-tag {
+    font-size: 0.98rem;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    color: #3a342a;
+    white-space: nowrap;
+}
 
 /* 🌸 季節選択・年選択・月選択：完全中央揃えコンテナ */
 .fits-screen-container { 

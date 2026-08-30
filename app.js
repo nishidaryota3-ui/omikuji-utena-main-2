@@ -45,7 +45,6 @@ async function loadAppData() {
             saijikiDict = JSON.parse(cachedSaijiki);
             haikuDatabase = JSON.parse(cachedHaiku);
             if (haikuDatabase.length > 0) {
-                createHaijinList();
                 hasCachedData = true;
                 hideLoadingOverlay();
             }
@@ -79,7 +78,6 @@ async function loadAppData() {
             console.warn('localStorage 保存容量オーバー等の警告:', storageErr);
         }
 
-        createHaijinList();
         hideLoadingOverlay();
     } catch (err) {
         console.error('最新データ取得エラー:', err);
@@ -147,15 +145,10 @@ function formatRubyText(text) {
 }
 
 // 🎲 おみ句じ起動処理
+// 🎲 おみ句じ直接起動（いっしょくた）
 function launchOmikuji() {
-    currentDisplayType = 'detarame';
     navState.category = 'omikuji_all';
-    navState.isDetarame = true;
-    currentRoomHaikus = [...haikuDatabase]; 
-    shuffleArray(currentRoomHaikus);
-    currentIndex = 0; 
-    renderPage('roomPage'); 
-    updateHaikuDisplay();
+    openRoom('detarame', 'all', 'おみ句じ');
 }
 
 // 🧭 パンくずリスト更新処理
@@ -172,12 +165,16 @@ function updateBreadcrumb() {
     
     if (navState.category === 'omikuji_all') {
         html += ` <span class="separator">&lt;</span> <span class="current">おみ句じ</span>`;
-    } else if (navState.category === 'haijin') {
-        html += ` <span class="separator">&lt;</span> <span class="link" onclick="renderPage('haijinPage')">おみ句じ（俳人）</span>`;
-        if (navState.currentLayer === 'roomPage') html += ` <span class="separator">&lt;</span> <span class="current">${navState.authorName}</span>`;
-    } else if (navState.category === 'haiku') {
-        html += ` <span class="separator">&lt;</span> <span class="link" onclick="renderPage('haikuPage')">おみ句じ（季節）</span>`;
-        if (navState.currentLayer === 'roomPage') html += ` <span class="separator">&lt;</span> <span class="current">${navState.seasonName}</span>`;
+    } else if (navState.category === 'kushu') {
+        html += ` <span class="separator">&lt;</span> <span class="${navState.currentLayer === 'kushuAuthorPage' ? 'current' : 'link'}" onclick="showKushuAuthorList()">句集</span>`;
+        if (navState.authorName) {
+            if (navState.currentLayer === 'kushuDetailPage') {
+                html += ` <span class="separator">&lt;</span> <span class="current">${escapeHtml(navState.authorName)}</span>`;
+            } else if (navState.currentLayer === 'roomPage') {
+                html += ` <span class="separator">&lt;</span> <span class="link" onclick="showKushuAuthorDetail('${escapeHtml(navState.authorName)}')">${escapeHtml(navState.authorName)}</span>`;
+                html += ` <span class="separator">&lt;</span> <span class="current">おみ句じ</span>`;
+            }
+        }
     } else if (navState.category === 'saijiki') {
         html += ` <span class="separator">&lt;</span> <span class="${navState.currentLayer === 'saijikiPage' ? 'current' : 'link'}" onclick="renderPage('saijikiPage')">季寄せ</span>`;
         if (navState.currentLayer === 'saijikiListRoomPage' && navState.kigoName) {
@@ -226,9 +223,13 @@ function renderPage(pageId) {
     }
     
     navState.currentLayer = pageId;
-    if (pageId === 'topPage') { navState.category = ''; navState.isDetarame = false; }
-    else if (pageId === 'haijinPage') navState.category = 'haijin';
-    else if (pageId === 'haikuPage') navState.category = 'haiku';
+    if (pageId === 'topPage') { 
+        navState.category = ''; 
+        navState.isDetarame = false; 
+        navState.authorName = '';
+        navState.kigoName = '';
+    }
+    else if (pageId === 'kushuAuthorPage' || pageId === 'kushuDetailPage') navState.category = 'kushu';
     else if (pageId === 'saijikiPage') {
         navState.category = 'saijiki';
         renderSaijikiKigoList();
@@ -238,7 +239,7 @@ function renderPage(pageId) {
 
     const catBtn = document.getElementById('fixedCatBtn');
     if (catBtn) {
-        if (navState.category === 'saijiki' || (navState.category === 'utena_archive' && !isRoomOpen)) {
+        if (navState.category === 'saijiki' || navState.category === 'kushu' || (navState.category === 'utena_archive' && !isRoomOpen)) {
             catBtn.classList.remove('hidden');
         } else {
             catBtn.classList.add('hidden');
@@ -266,42 +267,170 @@ function adjustScrollAlignment(container) {
     });
 }
 
-// 👥 俳人一覧の構築
-function createHaijinList() {
-    const container = document.getElementById('haijinList'); 
+// ========================================================
+// 👥 句集（俳人別アーカイブ ＆ 時系列スクロール）
+// ========================================================
+
+let currentKushuAuthor = '';
+let currentKushuMode = 'chrono'; // 'chrono' | 'omikuji'
+
+// 🌸 句集：俳人一覧の表示
+function showKushuAuthorList() {
+    navState.category = 'kushu';
+    navState.authorName = '';
+    const container = document.getElementById('kushuAuthorList'); 
     if (!container) return;
     container.innerHTML = '';
 
+    // 1. 作品データベースから俳人ごとの句数を集計
     let authorMap = {};
     haikuDatabase.forEach(item => { 
         if (item.author && item.author !== '作者不詳') {
             if (!authorMap[item.author]) {
-                authorMap[item.author] = item.authorKana || item.author; 
+                authorMap[item.author] = {
+                    name: item.author,
+                    kana: item.authorKana || item.author,
+                    count: 0
+                };
             }
+            authorMap[item.author].count++;
         }
     });
 
-    let uniqueAuthors = Object.keys(authorMap);
-    uniqueAuthors.sort((a, b) => {
-        let kanaA = authorMap[a];
-        let kanaB = authorMap[b];
-        return kanaA.localeCompare(kanaB, 'ja');
-    });
+    let authors = Object.values(authorMap);
+    if (authors.length === 0) {
+        container.innerHTML = '<div style="writing-mode: vertical-rl; -webkit-writing-mode: vertical-rl; color: #888; margin: auto;">まだ俳人が登録されていません</div>';
+        renderPage('kushuAuthorPage');
+        return;
+    }
 
-    uniqueAuthors.forEach(author => {
+    // 五十音順ソート
+    authors.sort((a, b) => a.kana.localeCompare(b.kana, 'ja'));
+
+    authors.forEach(item => {
         const el = document.createElement('div'); 
-        el.className = 'vertical-link'; 
-        el.innerText = author; 
-        el.onclick = function() { jumpToAuthorRoom(author); };
+        el.className = 'kushu-author-item'; 
+        
+        let rubyHtml = escapeHtml(item.name);
+        if (item.kana && item.kana !== item.name) {
+            rubyHtml = `<ruby>${escapeHtml(item.name)}<rt>${escapeHtml(item.kana)}</rt></ruby>`;
+        }
+        
+        const countStr = toKanjiNum(String(item.count)) + '句';
+
+        el.innerHTML = `
+            <div class="kushu-author-name">${rubyHtml}</div>
+            <span class="kushu-count-badge">${countStr}</span>
+        `;
+        el.onclick = () => showKushuAuthorDetail(item.name);
         container.appendChild(el);
     });
 
+    renderPage('kushuAuthorPage');
     adjustScrollAlignment(container);
 }
 
-function jumpToAuthorRoom(author) {
-    navState.authorName = author;
-    openRoom('author', author, author);
+// 🌸 句集：俳人詳細（時系列スクロール画面）
+function showKushuAuthorDetail(authorName) {
+    currentKushuAuthor = authorName;
+    navState.category = 'kushu';
+    navState.authorName = authorName;
+    switchKushuMode('chrono');
+}
+
+// 🌸 句集モード切替（時系列 ｜ おみ句じ）
+function switchKushuMode(mode) {
+    currentKushuMode = mode;
+    const tabChrono = document.getElementById('kmodeChrono');
+    const tabOmikuji = document.getElementById('kmodeOmikuji');
+    const toggleGroup = document.querySelector('.kushu-toggle-group');
+
+    if (tabChrono) tabChrono.classList.toggle('active', mode === 'chrono');
+    if (tabOmikuji) tabOmikuji.classList.toggle('active', mode === 'omikuji');
+
+    if (mode === 'chrono') {
+        if (toggleGroup) toggleGroup.style.display = 'flex';
+        renderKushuChronoList();
+    } else {
+        // おみ句じモード（当該作者の全句をランダム一句鑑賞）
+        if (toggleGroup) toggleGroup.style.display = 'none';
+        openRoom('author', currentKushuAuthor, currentKushuAuthor);
+    }
+}
+
+// 🌸 句集：時系列スクロールの描画（発行年月セパレーター挿入）
+function renderKushuChronoList() {
+    const container = document.getElementById('kushuHaikuList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    let authorHaikus = haikuDatabase.filter(h => h.author === currentKushuAuthor);
+    if (authorHaikus.length === 0) {
+        container.innerHTML = '<div style="writing-mode: vertical-rl; -webkit-writing-mode: vertical-rl; color: #888; margin: auto;">作品が登録されていません</div>';
+        renderPage('kushuDetailPage');
+        return;
+    }
+
+    // 時系列ソート（発行年 ➡ 発行月 ➡ 号内順）
+    authorHaikus.sort((a, b) => {
+        const yearA = parseInt(a.issueYear, 10) || 0;
+        const yearB = parseInt(b.issueYear, 10) || 0;
+        if (yearA !== yearB) return yearA - yearB;
+        
+        const monthA = parseInt(a.issueMonth, 10) || 0;
+        const monthB = parseInt(b.issueMonth, 10) || 0;
+        if (monthA !== monthB) return monthA - monthB;
+
+        return (a.orderInIssue || 0) - (b.orderInIssue || 0);
+    });
+
+    const isDividerVisible = document.getElementById('kushuIssueDividerToggle') ? document.getElementById('kushuIssueDividerToggle').checked : true;
+
+    let lastIssueKey = '';
+    authorHaikus.forEach(item => {
+        const currentIssueKey = `${item.issueYear || ''}_${item.issueMonth || ''}`;
+        
+        // 号が変わったら発行年月セパレーターを挿入
+        if (currentIssueKey !== lastIssueKey && (item.issueYear || item.issueMonth)) {
+            lastIssueKey = currentIssueKey;
+            
+            const divider = document.createElement('div');
+            divider.className = 'kushu-issue-divider' + (isDividerVisible ? '' : ' hidden');
+            
+            const eraStr = item.issueYear ? toJapaneseEra(item.issueYear) : '';
+            const monthStr = item.issueMonth ? toKanjiMonth(item.issueMonth) : '';
+            const issueLabel = `${eraStr}${monthStr}`;
+
+            divider.innerHTML = `<span class="kushu-issue-tag">${escapeHtml(issueLabel)}</span>`;
+            container.appendChild(divider);
+        }
+
+        // 句カード
+        const card = document.createElement('div');
+        card.className = 'kushu-haiku-card';
+        
+        const kigoText = item.kigo ? escapeHtml(item.kigo) : '';
+        const seasonJa = SEASON_NAMES_JA[item.season] || '';
+        const tagText = kigoText ? `${kigoText}（${seasonJa}）` : seasonJa;
+
+        card.innerHTML = `
+            <div class="kushu-phrase">${formatRubyText(item.phrase)}</div>
+            ${tagText ? `<div class="kushu-kigo-tag">${tagText}</div>` : ''}
+        `;
+        container.appendChild(card);
+    });
+
+    renderPage('kushuDetailPage');
+    adjustScrollAlignment(container);
+}
+
+// 🌸 年月表示 ON/OFF 切り替え
+function toggleKushuIssueDividers() {
+    const isChecked = document.getElementById('kushuIssueDividerToggle') ? document.getElementById('kushuIssueDividerToggle').checked : true;
+    const dividers = document.querySelectorAll('.kushu-issue-divider');
+    dividers.forEach(el => {
+        el.classList.toggle('hidden', !isChecked);
+    });
 }
 
 // 🔍 季語インクリメンタル検索
