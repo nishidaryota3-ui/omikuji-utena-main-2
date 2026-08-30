@@ -580,7 +580,7 @@ function executeKushuPrint() {
         if (pageObj.type === 'cover') {
             return `
                 <div class="sheet-half">
-                    <div class="sheet-half-content">
+                    <div class="sheet-half-content centered-content">
                         <div class="cover-box">
                             <div class="print-cover-title">${escapeHtml(bookletTitle)}</div>
                             <div class="print-cover-author">${escapeHtml(currentKushuAuthor)}</div>
@@ -593,7 +593,7 @@ function executeKushuPrint() {
         if (pageObj.type === 'tobira') {
             return `
                 <div class="sheet-half">
-                    <div class="sheet-half-content">
+                    <div class="sheet-half-content centered-content">
                         <div class="tobira-box">
                             <div class="print-tobira-title">${escapeHtml(bookletTitle)}</div>
                         </div>
@@ -605,7 +605,7 @@ function executeKushuPrint() {
         if (pageObj.type === 'colophon') {
             return `
                 <div class="sheet-half">
-                    <div class="sheet-half-content">
+                    <div class="sheet-half-content centered-content">
                         <div class="print-colophon-box">
                             <div class="print-colophon-title">${escapeHtml(bookletTitle)}</div>
                             <div class="print-colophon-author">著者　${escapeHtml(currentKushuAuthor)}</div>
@@ -739,8 +739,20 @@ function executeKushuPrint() {
             <title>${escapeHtml(bookletTitle)}</title>
             <style>
                 @page {
-                    size: landscape;
+                    size: 297mm 210mm;
                     margin: 0;
+                }
+                @media print {
+                    @page {
+                        size: landscape;
+                        margin: 0;
+                    }
+                    html, body {
+                        width: 297mm !important;
+                        height: 210mm !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
                 }
                 * {
                     margin: 0;
@@ -778,30 +790,29 @@ function executeKushuPrint() {
                 .sheet-half {
                     width: 148.5mm;
                     height: 210mm;
-                    padding: 16mm 14mm 14mm;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: space-between;
-                    align-items: center;
                     position: relative;
+                    overflow: hidden;
+                    background: #ffffff;
                 }
-                /* 🌟 上下左右完全中央寄せコンテナ（横書きFlexboxで中の縦書きブロックを中央配置） */
+                /* 🌟 天（上）マージン 26mm、地（下）マージン 24mm を絶対確保！上のはみ出しを確実に防止 */
                 .sheet-half-content {
-                    flex: 1;
+                    position: absolute;
+                    top: 26mm;
+                    bottom: 24mm;
+                    left: 14mm;
+                    right: 14mm;
                     display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    width: 100%;
-                    height: 165mm;
+                    justify-content: center; /* 左右中央寄せ！ */
+                    align-items: flex-start; /* 天（上）揃え！ */
                 }
-                /* 🌟 縦書きブロック（純粋なvertical-rlで右から左へ並べる） */
+                /* 🌟 縦書きブロック */
                 .haiku-columns-group {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
                     display: block;
-                    height: 155mm;
-                    max-height: 155mm;
                     width: fit-content;
+                    height: fit-content;
+                    max-height: 155mm;
                     text-align: start;
                 }
 
@@ -810,7 +821,7 @@ function executeKushuPrint() {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
                     display: block;
-                    font-size: 12pt;
+                    font-size: 11.5pt;
                     letter-spacing: 0.28em;
                     line-height: 1.0;
                     color: #111111;
@@ -840,12 +851,12 @@ function executeKushuPrint() {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
                     display: block;
-                    font-size: 10.5pt;
+                    font-size: 10pt;
                     font-weight: 600;
                     letter-spacing: 0.28em;
                     color: #222222;
                     border-right: 1.2pt solid #222222;
-                    padding-right: 2.8mm;
+                    padding-right: 2.5mm;
                     margin-left: ${linesPerPage >= 5 ? '6.0mm' : '8.5mm'};
                     margin-right: 0;
                     margin-top: 0;
@@ -854,16 +865,23 @@ function executeKushuPrint() {
                     height: fit-content;
                 }
 
+                /* 🌟 ノンブル（ページ番号）：用紙の最下部中央に配置 */
                 .print-nombre {
+                    position: absolute;
+                    bottom: 9mm;
+                    left: 0;
+                    width: 148.5mm;
+                    text-align: center;
                     font-size: 8.5pt;
                     color: #888888;
                     font-family: serif;
                     letter-spacing: 0.1em;
-                    text-align: center;
-                    margin-top: 2mm;
                 }
 
                 /* 表紙 */
+                .sheet-half-content.centered-content {
+                    align-items: center;
+                }
                 .cover-box {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
