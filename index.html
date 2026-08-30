@@ -42,11 +42,20 @@
     </div>
 
     <!-- 🌸 季語解説ポップアップカード -->
-    <div id="kigoCardOverlay" class="card-overlay hidden" onclick="closeKigoCard()">
-        <div class="kigo-card-content">
-            <div class="card-column parent-kigo-col" id="cardParentKigo"></div>
-            <div class="card-column child-kigo-col" id="cardChildKigo"></div>
-            <div class="card-column desc-kigo-col" id="cardDesc"></div>
+    <div id="kigoCardOverlay" class="card-overlay hidden" onclick="closeKigoCard(event)">
+        <div class="kigo-card-wrapper" onclick="event.stopPropagation()">
+            <span class="card-close-btn" onclick="closeKigoCard(event)">✕</span>
+            <div class="kigo-card-content" id="kigoCardContentArea" onclick="onKigoCardClicked()">
+                <div class="card-column parent-kigo-col" id="cardParentKigo"></div>
+                <div class="card-column child-kigo-col" id="cardChildKigo"></div>
+                <div class="card-column desc-kigo-col" id="cardDesc"></div>
+            </div>
+            <!-- 下部アクションバー（例句がある場合はボタンを表示） -->
+            <div id="cardActionFooter" class="card-action-footer">
+                <button id="cardViewWorksBtn" class="card-action-btn" onclick="onKigoCardClicked()">
+                    例句を見る（<span id="cardWorkCountNum">0</span>句） →
+                </button>
+            </div>
         </div>
     </div>
 
@@ -93,11 +102,15 @@
     <!-- 🌸 季寄せ：大画面 ページ（風月スタイル） -->
     <div id="saijikiPage" class="layer-page saijiki-screen-layer">
         <div class="saijiki-screen-header">
-            <!-- ミニマル伸縮検索バー -->
-            <div id="saijikiSearchWrapper" class="subtle-search-wrapper" onclick="expandSaijikiSearchInput()">
-                <span class="search-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
-                <input type="text" id="saijikiSearchInput" class="subtle-search-input" placeholder="季語検索" oninput="onSaijikiSearchChanged()" onblur="collapseSaijikiSearchIfEmpty()">
-                <span id="clearSaijikiSearchBtn" class="search-clear-btn hidden" onclick="clearSaijikiSearch(event)">✕</span>
+            <!-- 常時開いた洗練された検索バー -->
+            <div class="saijiki-search-container">
+                <div class="saijiki-search-box-pill">
+                    <span class="search-icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </span>
+                    <input type="text" id="saijikiSearchInput" placeholder="季語を検索（例：春の夕）" oninput="onSaijikiSearchChanged()">
+                    <span id="clearSaijikiSearchBtn" class="search-clear-btn hidden" onclick="clearSaijikiSearch(event)">✕</span>
+                </div>
             </div>
 
             <!-- 季節タブ -->

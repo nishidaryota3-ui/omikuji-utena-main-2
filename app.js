@@ -495,10 +495,8 @@ function renderSaijikiKigoList() {
         itemEl.className = 'saijiki-kigo-item';
         itemEl.setAttribute('data-row', rowChar);
         itemEl.setAttribute('data-timing', pData.detailSeason || '');
-        itemEl.setAttribute('data-cat', pData.category || '');
-        
-        // 🌟 季語クリックで直ちに奥の階層（例句大画面スクロール）へ遷移！
-        itemEl.onclick = () => openSaijikiRoom(pData.parentKigo);
+        // 🌟 季語クリックでまず季語解説フロートパネルを表示！
+        itemEl.onclick = () => openKigoCard(pData.parentKigo);
 
         let rubyHtml = escapeHtml(pData.parentKigo);
         if (pData.parentKana && pData.parentKana !== pData.parentKigo) {
@@ -673,12 +671,16 @@ function openSaijikiRoom(kigoName) {
 
 // 🌸 季語解説カードの表示（ポップアップ）
 function openKigoCard(kigoName) {
+    currentTargetKigo = kigoName;
+
     let cleanKey = String(kigoName).replace(/[\s\u3000]+/g, '').trim();
     let saijikiInfo = saijikiDict[cleanKey] || saijikiDict[kigoName];
 
     const parentEl = document.getElementById('cardParentKigo');
     const childEl = document.getElementById('cardChildKigo');
     const descEl = document.getElementById('cardDesc');
+    const countNumEl = document.getElementById('cardWorkCountNum');
+    const actionBtn = document.getElementById('cardViewWorksBtn');
 
     if (!saijikiInfo) {
         if (parentEl) parentEl.innerText = kigoName;
@@ -687,7 +689,7 @@ function openKigoCard(kigoName) {
     } else {
         if (parentEl) {
             if (saijikiInfo.kigoKana) {
-                parentEl.innerHTML = `<ruby>${saijikiInfo.parentKigo}<rt>${saijikiInfo.kigoKana}</rt></ruby>`;
+                parentEl.innerHTML = `<ruby>${escapeHtml(saijikiInfo.parentKigo)}<rt>${escapeHtml(saijikiInfo.kigoKana)}</rt></ruby>`;
             } else {
                 parentEl.innerText = saijikiInfo.parentKigo;
             }
@@ -696,11 +698,37 @@ function openKigoCard(kigoName) {
         if (descEl) descEl.innerText = saijikiInfo.desc ? saijikiInfo.desc : '解説データ準備中';
     }
 
+    // 作品数の集計
+    let matchingHaikus = haikuDatabase.filter(item => (item.parentKigo === kigoName || item.kigo === kigoName));
+    const workCount = matchingHaikus.length;
+
+    if (countNumEl) countNumEl.innerText = workCount;
+    if (actionBtn) {
+        if (workCount > 0) {
+            actionBtn.classList.remove('disabled');
+            actionBtn.innerHTML = `例句を見る（${workCount}句） →`;
+        } else {
+            actionBtn.classList.add('disabled');
+            actionBtn.innerHTML = `例句はまだありません`;
+        }
+    }
+
     const overlay = document.getElementById('kigoCardOverlay');
     if (overlay) overlay.classList.remove('hidden');
 }
 
-function closeKigoCard() {
+// 🌸 季語解説カードをクリックした時の処理（例句があれば奥の例句画面へ遷移）
+function onKigoCardClicked() {
+    if (!currentTargetKigo) return;
+    let matchingHaikus = haikuDatabase.filter(item => (item.parentKigo === currentTargetKigo || item.kigo === currentTargetKigo));
+    if (matchingHaikus.length > 0) {
+        closeKigoCard();
+        openSaijikiRoom(currentTargetKigo);
+    }
+}
+
+function closeKigoCard(event) {
+    if (event) event.stopPropagation();
     const overlay = document.getElementById('kigoCardOverlay');
     if (overlay) overlay.classList.add('hidden');
 }
