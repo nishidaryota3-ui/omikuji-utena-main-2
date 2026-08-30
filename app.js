@@ -617,8 +617,9 @@ function executeKushuPrint() {
             `;
         }
 
-        // 本文ページ：アイテム（年月見出し／俳句）を縦書き中央グループ内に展開
+        // 本文ページ：アイテム（年月見出し／俳句）を均等割り付けコンテナに展開
         let innerHtml = '';
+        const itemCount = (pageObj.items || []).length;
         (pageObj.items || []).forEach(item => {
             if (item.type === 'header') {
                 innerHtml += `<div class="print-issue-header">${escapeHtml(item.text)}</div>`;
@@ -628,13 +629,12 @@ function executeKushuPrint() {
         });
 
         const nombreHtml = pageObj.pageNumber ? `- ${pageObj.pageNumber} -` : '';
+        const layoutClass = itemCount <= 1 ? 'single-item' : (itemCount === 2 ? 'two-items' : (itemCount === 3 ? 'three-items' : 'multi-items'));
 
         return `
             <div class="sheet-half">
-                <div class="sheet-half-content">
-                    <div class="haiku-columns-group">
-                        ${innerHtml}
-                    </div>
+                <div class="sheet-half-content ${layoutClass}">
+                    ${innerHtml}
                 </div>
                 <div class="print-nombre">${nombreHtml}</div>
             </div>
@@ -794,29 +794,29 @@ function executeKushuPrint() {
                     overflow: hidden;
                     background: #ffffff;
                 }
-                /* 🌟 天（上）マージン 26mm、地（下）マージン 24mm を絶対確保！上のはみ出しを確実に防止 */
+                /* 🌟 コンテンツエリア：左右マージン 16mm、上下マージン 20mm */
                 .sheet-half-content {
                     position: absolute;
-                    top: 26mm;
-                    bottom: 24mm;
-                    left: 14mm;
-                    right: 14mm;
+                    top: 20mm;
+                    bottom: 22mm;
+                    left: 16mm;
+                    right: 16mm;
                     display: flex;
-                    justify-content: center; /* 左右中央寄せ！ */
-                    align-items: flex-start; /* 天（上）揃え！ */
+                    flex-direction: row;
+                    justify-content: space-between; /* 🌟 左右均等割り付け！（ページ全体に均等に広がる） */
+                    align-items: center;            /* 🌟 上下方向完全中央揃え！ */
                 }
-                /* 🌟 縦書きブロック */
-                .haiku-columns-group {
-                    writing-mode: vertical-rl;
-                    -webkit-writing-mode: vertical-rl;
-                    display: block;
-                    width: fit-content;
-                    height: fit-content;
-                    max-height: 155mm;
-                    text-align: start;
+                .sheet-half-content.single-item {
+                    justify-content: center;
+                }
+                .sheet-half-content.two-items {
+                    justify-content: space-around;
+                }
+                .sheet-half-content.three-items {
+                    justify-content: space-around;
                 }
 
-                /* 🌟 各句は display: block にすることで、必ず独立した1列（新しい行）になり、絶対に縦に2句積まれない！ */
+                /* 🌟 各句：縦書きで独立した1列 */
                 .print-phrase-line {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
@@ -827,14 +827,8 @@ function executeKushuPrint() {
                     color: #111111;
                     white-space: nowrap;
                     height: fit-content;
-                    margin-left: ${linesPerPage >= 5 ? '8.0mm' : (linesPerPage === 4 ? '10.0mm' : (linesPerPage === 3 ? '13.0mm' : (linesPerPage === 2 ? '17.0mm' : '0mm')))};
-                    margin-right: 0;
-                    margin-top: 0;
-                    margin-bottom: 0;
+                    margin: 0;
                     padding: 0;
-                }
-                .print-phrase-line:last-child {
-                    margin-left: 0;
                 }
                 .print-phrase-line ruby {
                     ruby-position: over;
@@ -846,7 +840,7 @@ function executeKushuPrint() {
                     letter-spacing: 0.05em;
                 }
 
-                /* 🌟 年月見出しも display: block で独立した1列に配置（線の長さは文字と同じ） */
+                /* 🌟 年月見出し：縦書き、文字と同じ長さの右線 */
                 .print-issue-header {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
@@ -857,10 +851,7 @@ function executeKushuPrint() {
                     color: #222222;
                     border-right: 1.2pt solid #222222;
                     padding-right: 2.5mm;
-                    margin-left: ${linesPerPage >= 5 ? '6.0mm' : '8.5mm'};
-                    margin-right: 0;
-                    margin-top: 0;
-                    margin-bottom: 0;
+                    margin: 0;
                     white-space: nowrap;
                     height: fit-content;
                 }
