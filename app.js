@@ -434,13 +434,19 @@ let printIncludeYearMonth = true; // true: 年月挿入する | false: 挿入し
 
 function openPrintModal() {
     const modal = document.getElementById('printSettingModal');
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
 }
 
 function closePrintModal(event) {
     if (event) event.stopPropagation();
     const modal = document.getElementById('printSettingModal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
 }
 
 function setPrintMode(mode) {
@@ -503,45 +509,43 @@ function executeKushuPrint() {
 
     const bookletTitle = `${currentKushuAuthor} 句集`;
 
-    // ページ分割（Pagination）ロジック
+    // 🌟 ページ分割（Pagination）ロジック：
+    // 年月が変わっても無駄に改ページせず、1ページあたり linesPerPage 句ずつ連続してストリーム配置
     const haikuPages = [];
+    let currentPageItems = [];
+    let currentHaikuCountInPage = 0;
+    let lastIssueKey = '';
 
-    if (printIncludeYearMonth) {
-        // 🌟 年月を挿入する方式：号ごとにグループ化し、先頭に年月見出しを配置
-        let issueMap = new Map();
-        authorHaikus.forEach(h => {
+    authorHaikus.forEach(h => {
+        if (printIncludeYearMonth) {
             const eraStr = h.issueYear ? toJapaneseEra(h.issueYear) : '';
             const monthStr = h.issueMonth ? toKanjiMonth(h.issueMonth) : '';
-            const key = `${eraStr}${monthStr}` || '無題';
-            if (!issueMap.has(key)) issueMap.set(key, []);
-            issueMap.get(key).push(h);
-        });
-
-        issueMap.forEach((haikusInIssue, issueLabel) => {
-            // 各号の句を linesPerPage ずつページに分ける
-            for (let i = 0; i < haikusInIssue.length; i += linesPerPage) {
-                const isFirstPageOfIssue = (i === 0);
-                haikuPages.push({
-                    type: 'body',
-                    issueLabel: isFirstPageOfIssue ? issueLabel : '',
-                    hasHeader: isFirstPageOfIssue,
-                    haikus: haikusInIssue.slice(i, i + linesPerPage)
-                });
+            const currentIssueKey = `${eraStr}${monthStr}`;
+            
+            // 号が変わったら年月見出しを挿入
+            if (currentIssueKey && currentIssueKey !== lastIssueKey) {
+                lastIssueKey = currentIssueKey;
+                currentPageItems.push({ type: 'header', text: currentIssueKey });
             }
-        });
-    } else {
-        // 年月を挿入しない方式：全句を均等に linesPerPage 句ずつ分割
-        for (let i = 0; i < authorHaikus.length; i += linesPerPage) {
-            haikuPages.push({
-                type: 'body',
-                issueLabel: '',
-                hasHeader: false,
-                haikus: authorHaikus.slice(i, i + linesPerPage)
-            });
         }
+
+        currentPageItems.push({ type: 'haiku', data: h });
+        currentHaikuCountInPage++;
+
+        // 1ページの句数上限に達したら次ページへ
+        if (currentHaikuCountInPage >= linesPerPage) {
+            haikuPages.push({ type: 'body', items: currentPageItems });
+            currentPageItems = [];
+            currentHaikuCountInPage = 0;
+        }
+    });
+
+    // 残りの句があれば最後のページとして追加
+    if (currentPageItems.length > 0) {
+        haikuPages.push({ type: 'body', items: currentPageItems });
     }
 
-    // 既存の印刷用iframeがあれば削除
+    // 既存の印刷用iframeがあれば完全削除
     let printIframe = document.getElementById('utena_print_iframe');
     if (printIframe) printIframe.remove();
 
@@ -550,8 +554,8 @@ function executeKushuPrint() {
     printIframe.style.position = 'fixed';
     printIframe.style.top = '0px';
     printIframe.style.left = '0px';
-    printIframe.style.width = '297mm';
-    printIframe.style.height = '210mm';
+    printIframe.style.width = '0px';
+    printIframe.style.height = '0px';
     printIframe.style.opacity = '0';
     printIframe.style.pointerEvents = 'none';
     printIframe.style.zIndex = '-9999';
@@ -575,10 +579,12 @@ function executeKushuPrint() {
         }
         if (pageObj.type === 'cover') {
             return `
-                <div class="sheet-half cover-half">
-                    <div class="sheet-half-content cover-content">
-                        <div class="print-cover-title">${escapeHtml(bookletTitle)}</div>
-                        <div class="print-cover-author">${escapeHtml(currentKushuAuthor)}</div>
+                <div class="sheet-half">
+                    <div class="sheet-half-content">
+                        <div class="cover-box">
+                            <div class="print-cover-title">${escapeHtml(bookletTitle)}</div>
+                            <div class="print-cover-author">${escapeHtml(currentKushuAuthor)}</div>
+                        </div>
                     </div>
                     <div class="print-nombre"></div>
                 </div>
@@ -586,9 +592,11 @@ function executeKushuPrint() {
         }
         if (pageObj.type === 'tobira') {
             return `
-                <div class="sheet-half tobira-half">
-                    <div class="sheet-half-content tobira-content">
-                        <div class="print-tobira-title">${escapeHtml(bookletTitle)}</div>
+                <div class="sheet-half">
+                    <div class="sheet-half-content">
+                        <div class="tobira-box">
+                            <div class="print-tobira-title">${escapeHtml(bookletTitle)}</div>
+                        </div>
                     </div>
                     <div class="print-nombre"></div>
                 </div>
@@ -596,8 +604,8 @@ function executeKushuPrint() {
         }
         if (pageObj.type === 'colophon') {
             return `
-                <div class="sheet-half colophon-half">
-                    <div class="sheet-half-content colophon-content">
+                <div class="sheet-half">
+                    <div class="sheet-half-content">
                         <div class="print-colophon-box">
                             <div class="print-colophon-title">${escapeHtml(bookletTitle)}</div>
                             <div class="print-colophon-author">著者　${escapeHtml(currentKushuAuthor)}</div>
@@ -609,22 +617,24 @@ function executeKushuPrint() {
             `;
         }
 
-        // 本文ページ
-        let headerHtml = '';
-        if (pageObj.hasHeader && pageObj.issueLabel) {
-            headerHtml = `<div class="print-issue-header">${escapeHtml(pageObj.issueLabel)}</div>`;
-        }
+        // 本文ページ：アイテム（年月見出し／俳句）を縦書き中央グループ内に展開
+        let innerHtml = '';
+        (pageObj.items || []).forEach(item => {
+            if (item.type === 'header') {
+                innerHtml += `<div class="print-issue-header">${escapeHtml(item.text)}</div>`;
+            } else if (item.type === 'haiku') {
+                innerHtml += `<div class="print-phrase-line">${formatPrintRubyText(item.data.phrase)}</div>`;
+            }
+        });
 
-        const linesHtml = (pageObj.haikus || []).map(h => `<div class="print-phrase-line">${formatPrintRubyText(h.phrase)}</div>`).join('');
         const nombreHtml = pageObj.pageNumber ? `- ${pageObj.pageNumber} -` : '';
 
-        const isDenseLayout = (pageObj.hasHeader && (pageObj.haikus || []).length >= 4) || (pageObj.haikus || []).length >= 5;
-
         return `
-            <div class="sheet-half ${isDenseLayout ? 'dense-layout' : ''}">
+            <div class="sheet-half">
                 <div class="sheet-half-content">
-                    ${headerHtml}
-                    ${linesHtml}
+                    <div class="haiku-columns-group">
+                        ${innerHtml}
+                    </div>
                 </div>
                 <div class="print-nombre">${nombreHtml}</div>
             </div>
@@ -768,34 +778,46 @@ function executeKushuPrint() {
                 .sheet-half {
                     width: 148.5mm;
                     height: 210mm;
-                    padding: 22mm 18mm 16mm;
+                    padding: 16mm 14mm 14mm;
                     display: flex;
                     flex-direction: column;
                     justify-content: space-between;
                     align-items: center;
                     position: relative;
                 }
+                /* 🌟 上下左右完全中央寄せコンテナ */
                 .sheet-half-content {
+                    flex: 1;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    width: 100%;
+                    height: 165mm;
+                }
+                .haiku-columns-group {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
-                    height: 155mm;
-                    width: 100%;
-                    padding: 0 4mm;
-                    text-align: start;
+                    display: inline-flex;
+                    flex-direction: row;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 7.5mm;
+                    max-height: 155mm;
                 }
 
+                /* 🌟 全ページ・全句で文字サイズを一定（12pt）に統一 */
                 .print-phrase-line {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
                     display: inline-block;
-                    vertical-align: top;
-                    font-size: 12.5pt;
+                    font-size: 12pt;
                     letter-spacing: 0.28em;
-                    line-height: 1.5;
-                    color: #1a1a1a;
+                    line-height: 1.0;
+                    color: #111111;
                     white-space: nowrap;
-                    margin-left: 11mm;
-                    height: 145mm;
+                    height: fit-content;
+                    margin: 0;
+                    padding: 0;
                 }
                 .print-phrase-line ruby {
                     ruby-position: over;
@@ -803,37 +825,25 @@ function executeKushuPrint() {
                 }
                 .print-phrase-line rt {
                     font-size: 0.45em;
-                    color: #555555;
+                    color: #444444;
                     letter-spacing: 0.05em;
                 }
 
+                /* 🌟 年月の右側の線は文字と同じ長さ（height: fit-content） */
                 .print-issue-header {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
                     display: inline-block;
-                    vertical-align: top;
-                    font-size: 11pt;
+                    font-size: 10.5pt;
                     font-weight: 600;
                     letter-spacing: 0.28em;
-                    color: #2b2b2b;
-                    border-right: 1.5pt solid #333333;
-                    padding-right: 3.5mm;
-                    margin-left: 7mm;
-                    margin-right: 0mm;
-                    height: 145mm;
+                    color: #222222;
+                    border-right: 1.2pt solid #222222;
+                    padding-right: 2.8mm;
+                    margin-left: 2.8mm;
                     white-space: nowrap;
-                }
-
-                /* 5句＋年月などの高密度レイアウト対応（5句が綺麗に5列収まる） */
-                .sheet-half.dense-layout .print-phrase-line {
-                    font-size: 11pt;
-                    letter-spacing: 0.22em;
-                    margin-left: 6.0mm;
-                }
-                .sheet-half.dense-layout .print-issue-header {
-                    font-size: 10.5pt;
-                    padding-right: 2.5mm;
-                    margin-left: 5.0mm;
+                    height: fit-content;
+                    align-self: center;
                 }
 
                 .print-nombre {
@@ -842,97 +852,82 @@ function executeKushuPrint() {
                     font-family: serif;
                     letter-spacing: 0.1em;
                     text-align: center;
-                    margin-top: 4mm;
+                    margin-top: 2mm;
                 }
 
                 /* 表紙 */
-                .cover-half {
-                    justify-content: center;
-                }
-                .cover-content {
+                .cover-box {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
-                    display: inline-block;
-                    text-align: center;
-                    height: 155mm;
-                    width: 100%;
-                    padding-top: 15mm;
+                    display: inline-flex;
+                    flex-direction: row;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 12mm;
+                    height: fit-content;
                 }
                 .print-cover-title {
-                    display: inline-block;
                     font-size: 26pt;
                     font-weight: 600;
                     letter-spacing: 0.35em;
-                    color: #1a1a1a;
-                    margin-left: 12mm;
+                    color: #111111;
+                    white-space: nowrap;
                 }
                 .print-cover-author {
-                    display: inline-block;
                     font-size: 14pt;
                     letter-spacing: 0.3em;
-                    color: #444444;
+                    color: #333333;
+                    white-space: nowrap;
+                    align-self: flex-end;
                     margin-top: 15mm;
                 }
 
                 /* 扉 */
-                .tobira-half {
-                    justify-content: center;
-                }
-                .tobira-content {
+                .tobira-box {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
                     display: inline-block;
-                    text-align: center;
-                    height: 155mm;
-                    width: 100%;
-                    padding-top: 25mm;
+                    height: fit-content;
                 }
                 .print-tobira-title {
                     font-size: 20pt;
                     font-weight: 500;
                     letter-spacing: 0.3em;
                     color: #333333;
+                    white-space: nowrap;
                 }
 
                 /* 奥付 */
-                .colophon-half {
-                    justify-content: center;
-                }
-                .colophon-content {
+                .print-colophon-box {
                     writing-mode: vertical-rl;
                     -webkit-writing-mode: vertical-rl;
-                    display: inline-block;
-                    height: 155mm;
-                    width: 100%;
-                    padding-top: 20mm;
-                    padding-right: 15mm;
-                }
-                .print-colophon-box {
-                    border: 0.8pt solid #666666;
-                    padding: 8mm 8mm;
-                    display: inline-block;
-                    height: 110mm;
+                    border: 0.8pt solid #555555;
+                    padding: 8mm 6mm;
+                    display: inline-flex;
+                    flex-direction: row;
+                    align-items: flex-start;
+                    gap: 5mm;
+                    height: 105mm;
                 }
                 .print-colophon-title {
-                    display: inline-block;
                     font-size: 13pt;
                     font-weight: 600;
                     letter-spacing: 0.25em;
-                    margin-left: 5mm;
+                    white-space: nowrap;
                 }
                 .print-colophon-author {
-                    display: inline-block;
                     font-size: 10pt;
                     letter-spacing: 0.2em;
                     color: #333333;
-                    margin-left: 4mm;
+                    white-space: nowrap;
                 }
                 .print-colophon-brand {
-                    display: inline-block;
                     font-size: 8.5pt;
                     letter-spacing: 0.2em;
-                    color: #666666;
+                    color: #555555;
                     margin-top: 12mm;
+                    white-space: nowrap;
+                    align-self: flex-end;
                 }
             </style>
         </head>
@@ -947,10 +942,15 @@ function executeKushuPrint() {
 
     closePrintModal();
 
-    // 印刷ダイアログを起動
+    // 印刷ダイアログを起動（起動後にiframeを安全に削除してUIのクリック阻害を防止）
     setTimeout(() => {
         printIframe.contentWindow.focus();
         printIframe.contentWindow.print();
+        
+        // 印刷ダイアログ終了後にiframeを安全にクリーンアップ
+        printIframe.contentWindow.onafterprint = () => {
+            if (printIframe) printIframe.remove();
+        };
     }, 400);
 }
 

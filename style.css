@@ -198,6 +198,13 @@ body, html {
 /* ========================================================
    🖨️ 印刷設定モーダル
    ======================================================== */
+#printSettingModal.hidden {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
 .print-modal-box {
     position: relative;
     background: #faf9f6;
