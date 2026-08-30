@@ -1057,12 +1057,6 @@ function renderSaijikiKigoList() {
 
     const query = document.getElementById('saijikiSearchInput') ? document.getElementById('saijikiSearchInput').value.trim().toLowerCase() : '';
 
-    // 五十音ジャンプバーの表示制御
-    const jumpBar = document.getElementById('saijikiGojuonBar');
-    if (jumpBar) {
-        jumpBar.classList.toggle('hidden', currentSaijikiMode !== 'gojuon' || query !== '');
-    }
-
     // 1. 作品データベースから季語ごとの句数を集計
     const kigoWorkMap = new Map();
     haikuDatabase.forEach(h => {
