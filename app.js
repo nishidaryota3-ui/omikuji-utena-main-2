@@ -1,6 +1,6 @@
 // 🌸 アプリケーション状態管理
-let haikuDatabase = [];
-let saijikiDict = {}; 
+let haikuDatabase = (typeof window !== 'undefined' && window.__UTENA_HAIKU_DATA__) ? window.__UTENA_HAIKU_DATA__ : [];
+let saijikiDict = (typeof window !== 'undefined' && window.__UTENA_SAIJIKI_DATA__) ? window.__UTENA_SAIJIKI_DATA__ : {}; 
 let currentRoomHaikus = []; 
 let currentIndex = 0;
 let isRoomOpen = false;
@@ -22,6 +22,25 @@ let navState = {
 
 let touchStartX = 0;
 let touchStartY = 0;
+
+// 🛠️ 共通ユーティリティ関数
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function toKanjiNum(numStr) {
+    const kanjiDigits = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+    const n = parseInt(numStr, 10);
+    if (isNaN(n)) return numStr;
+    if (n <= 10) return ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'][n];
+    if (n < 20) return '十' + kanjiDigits[n % 10];
+    return String(numStr).split('').map(d => kanjiDigits[parseInt(d, 10)] || d).join('');
+}
 
 // 🚀 初期ロード処理（高速キャッシュ＆オフライン対応）
 window.onload = async function() {
@@ -1044,14 +1063,6 @@ function getGojuonRowChar(kana) {
     return 'あ';
 }
 
-function toKanjiNum(numStr) {
-    const kanjiDigits = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
-    const n = parseInt(numStr, 10);
-    if (isNaN(n)) return numStr;
-    if (n <= 10) return ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'][n];
-    if (n < 20) return '十' + kanjiDigits[n % 10];
-    return String(numStr).split('').map(d => kanjiDigits[parseInt(d, 10)] || d).join('');
-}
 
 // 🌸 季寄せ季語一覧の描画（右から左へ並ぶ縦書きリスト ＋ 句数バッジ ＋ 五十音/時候順切り替え）
 function renderSaijikiKigoList() {
